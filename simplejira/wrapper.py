@@ -292,7 +292,7 @@ class JiraWrapper(object):
             self.get_current_sprint()
         return self._current_sprint_name
 
-    def search_issues(self, sprint=None, assignee=None, status=None):
+    def search_issues(self, sprint=None, assignee=None, status=None, text=None):
         """
         Search issues
 
@@ -300,7 +300,7 @@ class JiraWrapper(object):
            sprint: sprint ID number, sprint name, or "backlog", default is current sprint
            assignee: user id, default is "currentUser"
            status: for e.x. "in progress"
-        
+
         Returns:
             List of JIRA.Issue resources
         """
@@ -311,6 +311,8 @@ class JiraWrapper(object):
         search_query = 'sprint = {} AND assignee = {}'.format(sprint, assignee)
         if status:
             search_query += ' AND status in ("{}")'.format(status)
+        if text:
+            search_query += ' AND (summary ~ "{}" OR description ~ "{}")'.format(text, text)
         return self.jira.search_issues(search_query)
 
     def get_my_issues(self):

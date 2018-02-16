@@ -75,6 +75,9 @@ class Prompt(cmd2.Cmd):
     ls_parser.add_argument(
         '-S', '--status', type=str, default=None,
         help='Status of the card. e.g. "inprogress" or "In Progress"')
+    ls_parser.add_argument(
+        '-t', '--text', type=str, default=None,
+        help='Search by text in title or description of the card e.g. --text "5.8 BZs"')
     @cmd2.with_argparser(ls_parser)
     def do_ls(self, args):
         sprint = None
@@ -86,9 +89,7 @@ class Prompt(cmd2.Cmd):
         status = None
         if args.status:
             status = self._jw.find_status_name(args.status)
-
-
-        issues = self._jw.search_issues(args.user, sprint, status)
+        issues = self._jw.search_issues(args.user, sprint, status, args.text)
         self.issue_collection = issue_collection(issues)
         self.issue_collection.print_table()
 
