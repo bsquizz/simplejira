@@ -1,7 +1,6 @@
 This file is used to track project TODO's
 
 * build 'ls' table by searching backlog
-* add 'card' command to assign a card to someone else
 * editing other details of a card (e.g. title, description -- via prompt if short, otherwise the text editor would be opened if desired -- the simplejira.common.editor_ignore_comments() method can be used here as it is in other areas)
 * editing entire card and entire worklog (only for the details we care about, via opening an editor)
     - this requires the 'updater' process on ResourceCollection class to be fully built out
