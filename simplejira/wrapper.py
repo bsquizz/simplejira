@@ -215,12 +215,12 @@ class JiraWrapper(object):
                 raise KeyError("config has no 'board' defined!")
 
             boards = self.jira.boards()
-            
+
             for b in boards:
                 if b.name.lower() == cfgboard or str(b.id) == cfgboard:
                     self._board_id = str(b.id)
                     break
-            
+
             if not self._board_id:
                 raise ValueError("Unable to find board '{}'".format(self.config['board']))
         return self._board_id
@@ -234,12 +234,12 @@ class JiraWrapper(object):
                 raise KeyError("config has no 'project' defined!")
 
             projects = self.jira.projects()
-            
+
             for p in projects:
                 if any(x == cfgproject for x in [p.key.lower(), p.name.lower(), str(p.id)]):
                     self._project_id = str(p.id)
                     break
-            
+
             if not self._project_id:
                 raise ValueError("Unable to find project '{}'".format(self.config['project']))
         return self._project_id
@@ -343,7 +343,7 @@ class JiraWrapper(object):
         except AttributeError:
             print("Warning: issue had no timetracking field, using timeoriginalestimate field")
             original = friendly_worklog_time(issue.fields.timeoriginalestimate)
-        f = IssueFields().timetracking(time_string, original) 
+        f = IssueFields().timetracking(time_string, original)
         issue.update(**f.kwarg)
 
     @staticmethod
@@ -388,7 +388,7 @@ class JiraWrapper(object):
 
         Args:
           txt: str or int
-        
+
         Returns:
           tuple of (component_name, component_id)
         """

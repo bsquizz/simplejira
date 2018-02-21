@@ -221,7 +221,8 @@ class CardEditor(cmd2.Cmd):
             'do_9': 'do_backlog',
             'do_10': 'do_pull',
             'do_11': 'do_remove',
-            'do_11': 'do_exit',
+            'do_12': 'do_assign',
+            'do_13': 'do_exit',
         }
 
         #self.shortcuts.update(self.cmd_shortcuts)
@@ -460,3 +461,19 @@ class CardEditor(cmd2.Cmd):
         collection = worklog_collection(worklogs)
         print(editor_ignore_comments(collection.to_yaml()))
     '''
+    assignee_parser = argparse.ArgumentParser()
+    assignee_parser.add_argument('assignee', const=None, type=str,
+                                 help="Assign card to someone as assign <username>;"
+                                 "username is case insensitive")
+    @cmd2.with_argparser(assignee_parser)
+    def do_assign(self, args):
+        if not args.assignee:
+            args.assignee = self.input("Enter assignee user id:")
+        continue_assignment = False
+        if not args.assignee:
+            continue_assignment = prompter.yesno("Leaving assignee blank would unassign the card."
+             "Continue?")
+        if continue_assignment or args.assignee:
+            self._jira.assign_issue(self.issue, args.assignee)
+        else:
+            print("Assignment did not change.")
