@@ -315,11 +315,14 @@ class JiraWrapper(object):
         Returns:
             List of JIRA.Issue resources
         """
-        if not sprint:
-            sprint = self.current_sprint_id
+        if sprint == "backlog":
+            search_query = 'project = {} AND sprint is EMPTY'.format(self.project_id)
+        else:
+            sprint = self.current_sprint_id if not sprint else sprint
+            search_query = 'sprint = {} '.format(sprint)
         if not assignee:
             assignee = "currentUser()"
-        search_query = 'sprint = {} AND assignee = {}'.format(sprint, assignee)
+        search_query += ' AND assignee = {}'.format(assignee)
         if status:
             search_query += ' AND status in ("{}")'.format(status)
         if text:

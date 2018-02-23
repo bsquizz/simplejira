@@ -98,7 +98,7 @@ class Prompt(cmd2.Cmd):
     def do_ls(self, args):
         sprint_id = None
         if args.sprint == "backlog":
-            print("Sorry, 'backlog' is on the TODO list :)")
+            sprint_id = args.sprint
         elif args.sprint:
             _, sprint_id = self._jw.find_sprint(args.sprint)
         status = None
