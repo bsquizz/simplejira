@@ -2,24 +2,9 @@ import re
 from datetime import datetime
 
 import editor
-import pkg_resources
 import iso8601
 from dateutil import tz, parser
 
-
-class PkgResource(object):
-    ASCII_ART = 'ascii_art.txt'
-    DEFAULT_CONFIG = 'config_default.yml'
-    ISSUE_TEMPLATE = 'issue_template.yml'
-
-    @staticmethod
-    def get_path(path):
-        return pkg_resources.resource_filename(__name__, 'resources/' + path)
-
-    @staticmethod
-    def read(path):
-        with open(PkgResource.get_path(path)) as f:
-            return f.read()
 
 def editor_ignore_comments(default_text):
     """
@@ -28,14 +13,19 @@ def editor_ignore_comments(default_text):
     :param default_text:
     :return:
     """
+    if not isinstance(default_text, bytes):
+        default_text = default_text.encode("utf-8")
     edited_text = editor.edit(contents=default_text)
+    if not isinstance(edited_text, str):
+        edited_text = edited_text.decode("utf-8")
     lines = edited_text.split('\n')
-    return "\n".join([line for line in lines if not line.startswith("#")])
+    return "\n".join(line for line in lines if not line.startswith("#"))
 
 
 def sanitize_worklog_time(s):
     """
-    Convert a time string entered by user to jira-acceptable format for issue time tracking
+    Convert a time string entered by user
+    to jira-acceptable format for issue time tracking
     """
     s = s.replace(' ', '')
 
@@ -61,7 +51,8 @@ def sanitize_worklog_time(s):
     if new_s:
         return new_s
     else:
-        # user might not have specified any strings at all, just pass along the int
+        # user might not have specified any strings at all,
+        # just pass along the int
         return s
 
 
@@ -96,7 +87,7 @@ def iso_to_datetime(string):
 # we'll use %c for datetime->string and for string->datetime
 # just use dateutil's parser
 
-#TIME_FORMAT = '%a %d %b %Y %I:%M:%S %p %Z'
+# TIME_FORMAT = '%a %d %b %Y %I:%M:%S %p %Z'
 
 
 def iso_to_ctime_str(string):

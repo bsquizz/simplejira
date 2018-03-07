@@ -5,18 +5,20 @@ import os
 import sys
 
 import prompter
-import yaml
 
-from .common import editor_ignore_comments, PkgResource
+from .common import editor_ignore_comments
 from .prompt import Prompt
+
+from .res import get_default_config, get_ascii_art
 
 CONFIG_FILE = os.path.expanduser('~/.simplejira.yml')
 
 
 def _create_config_file():
-    new_config = editor_ignore_comments(PkgResource.read(PkgResource.DEFAULT_CONFIG))
+    new_config = editor_ignore_comments(get_default_config())
 
-    filename = prompter.prompt("Enter path for saving config", default=CONFIG_FILE)
+    filename = prompter.prompt(
+        "Enter path for saving config", default=CONFIG_FILE)
     print("Writing config to {}".format(filename))
     with open(filename, 'w') as f:
         f.write(new_config)
@@ -48,7 +50,7 @@ def main():
         sys.exit(0)
 
     # print welcome msg
-    print(PkgResource.read(PkgResource.ASCII_ART))
+    print(get_ascii_art())
 
     sys.argv = sys.argv[:1] + unknown_args
     Prompt(config_file=filename).cmdloop()

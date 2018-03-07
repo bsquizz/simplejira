@@ -7,10 +7,11 @@ import prompter
 import yaml
 
 from .common import (
-    editor_ignore_comments, sanitize_worklog_time, PkgResource, ctime_str_to_datetime
+    editor_ignore_comments, sanitize_worklog_time, ctime_str_to_datetime
 )
 from .resource_collections import issue_collection, worklog_collection
 from .wrapper import JiraWrapper, InvalidLabelError
+from .res import get_issue_template
 
 
 def _selector(list_to_select_from, title):
@@ -58,13 +59,13 @@ class Prompt(cmd2.Cmd):
         self.prompt = "(simplejira) "
         self.allow_cli_args = True
         self.exclude_from_help += [
-            'do_load', 'do_py', 'do_pyscript', 'do_shell', 'do_set', 'do_shortcuts', 'do_history',
-            'do_edit',
+            'do_load', 'do_py', 'do_pyscript', 'do_shell', 'do_set',
+            'do_shortcuts', 'do_history', 'do_edit',
         ]
 
         self.config_file = config_file
         self.issue_collection = None
-        
+
         self._init_jira()
 
         print("\nWelcome to simplejira!  We hope you have a BLAST.\n")
@@ -96,6 +97,7 @@ class Prompt(cmd2.Cmd):
     ls_parser.add_argument(
         '-t', '--text', type=str, default=None,
         help='Search by text in title or description of the card e.g. --text "5.8 BZs"')
+
     @cmd2.with_argparser(ls_parser)
     def do_ls(self, args):
         sprint_id = None
@@ -117,6 +119,7 @@ class Prompt(cmd2.Cmd):
     card_parser.add_argument('number', type=int, help="Card # from table to operate on")
     card_parser.add_argument('cmd', nargs=argparse.REMAINDER,
                              help="Command to pass on to card prompt (optional)")
+
     @cmd2.with_argparser(card_parser)
     def do_card(self, args):
         if not self.issue_collection:
@@ -144,6 +147,7 @@ class Prompt(cmd2.Cmd):
                                help='Sprint name, sprint number, or "blacklog". Default=current')
     create_parser.add_argument('-T', '--timeleft', type=str, default=None,
                                help='Estimated time remaining, e.g. "5h30m"')
+
     @cmd2.with_argparser(create_parser)
     def do_create(self, args):
         curr_sprint_name = self._jw.current_sprint_name
@@ -151,7 +155,7 @@ class Prompt(cmd2.Cmd):
 
         if args.editor:
             kwargs = yaml.safe_load(
-                editor_ignore_comments(PkgResource.read(PkgResource.ISSUE_TEMPLATE))
+                editor_ignore_comments(get_issue_template())
             )
 
             # Convert 'label' kwarg to 'labels' for JiraWrapper.create_issue()
@@ -227,7 +231,7 @@ class CardEditor(cmd2.Cmd):
             'do_14': 'do_exit',
         }
 
-        #self.shortcuts.update(self.cmd_shortcuts)
+        # self.shortcuts.update(self.cmd_shortcuts)
         # ^^ this isn't working ... so let's try this:
         for shortcut, cmd in self.cmd_shortcuts.iteritems():
             setattr(self, shortcut, getattr(self, cmd))
@@ -284,6 +288,7 @@ class CardEditor(cmd2.Cmd):
     log_parser = argparse.ArgumentParser()
     log_parser.add_argument('timespent', const=None, nargs='?', help="Time spent, e.g. 2h30m")
     log_parser.add_argument('comment', const=None, nargs='*', help="Comment for the work done")
+
     @cmd2.with_argparser(log_parser)
     def do_logwork(self, args):
         """log work"""
@@ -326,6 +331,7 @@ class CardEditor(cmd2.Cmd):
     status_parser = argparse.ArgumentParser()
     status_parser.add_argument('new_status', const=None, type=str, nargs='*',
                                help="Name of new status (e.g. in progress or inprogress)")
+
     @cmd2.with_argparser(status_parser)
     def do_status(self, args):
         """change status"""
@@ -356,6 +362,7 @@ class CardEditor(cmd2.Cmd):
     # -----------------
     component_parser = argparse.ArgumentParser()
     component_parser.add_argument('component_name', const=None, type=str, nargs='?')
+
     @cmd2.with_argparser(component_parser)
     def do_component(self, args):
         """set component"""
@@ -369,6 +376,7 @@ class CardEditor(cmd2.Cmd):
     # -----------------
     label_parser = argparse.ArgumentParser()
     label_parser.add_argument('label_names', const=None, type=str, nargs='*')
+
     @cmd2.with_argparser(label_parser)
     def do_addlabel(self, args):
         """add label(s)"""
@@ -383,7 +391,7 @@ class CardEditor(cmd2.Cmd):
                 args.label_names = self.input("Enter label(s):").split(' ')
         current_labels = self.issue.fields.labels
         # use set to de-dupe but convert back to list for json serialization
-        updated_labels = list(set(current_labels + args.label_names))  
+        updated_labels = list(set(current_labels + args.label_names))
         try:
             self._jw.update_labels(self.issue, updated_labels)
         except InvalidLabelError as e:
@@ -394,7 +402,6 @@ class CardEditor(cmd2.Cmd):
                     self._jw.update_labels(self.issue, updated_labels)
                 except InvalidLabelError:
                     pass
-
 
     # -----------------
     # rmlabels
@@ -430,6 +437,7 @@ class CardEditor(cmd2.Cmd):
     timeleft_parser = argparse.ArgumentParser()
     timeleft_parser.add_argument('time_string', const=None, type=str, nargs='*',
                                  help="Estimated time remaining (e.g. 2h30m)")
+
     @cmd2.with_argparser(timeleft_parser)
     def do_timeleft(self, args):
         if not args.time_string:
@@ -477,7 +485,7 @@ class CardEditor(cmd2.Cmd):
         if not prompter.yesno("Are you sure you want to update worklogs?"):
             print("Cancelled")
             return
-        
+
         print("Deleting old worklog entries")
         if current_worklogs:
             for wl in current_worklogs:
@@ -501,6 +509,7 @@ class CardEditor(cmd2.Cmd):
     assignee_parser.add_argument('assignee', default=None, type=str, nargs='?',
                                  help="Assign card to someone as assign <username>;"
                                  "username is case insensitive")
+
     @cmd2.with_argparser(assignee_parser)
     def do_assign(self, args):
         if not args.assignee:
@@ -508,7 +517,7 @@ class CardEditor(cmd2.Cmd):
         continue_assignment = False
         if not args.assignee:
             continue_assignment = prompter.yesno(
-                    "Leaving assignee blank would unassign the card. Continue?")
+                "Leaving assignee blank would unassign the card. Continue?")
         if continue_assignment or args.assignee:
             self._jira.assign_issue(self.issue, args.assignee)
         else:
