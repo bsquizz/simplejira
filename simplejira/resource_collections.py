@@ -10,6 +10,7 @@ from jira.resources import Resource, Issue, Worklog
 from prettytable import PrettyTable
 
 from .common import iso_to_ctime_str, friendly_worklog_time, iso_to_datetime
+from six import string_types
 
 
 @attr.s
@@ -17,34 +18,53 @@ class ResourceCollection(object):
     """
     Represents an ordered set of Jira Resource entries (issues, worklogs, etc.)
 
-    Contains methods that dictate the entries from a field that should be displayed/operated on,
+    Contains methods that dictate the entries from a field
+    that should be displayed/operated on,
     how they should be sorted, updated, printed, etc.
 
-    This class uses attrs to instantiate objects, and collections that hold different Resource
+    This class uses attrs to instantiate objects,
+    and collections that hold different Resource
     types are instantiated by methods below this class.
     """
 
     """ defines type of resource in this collection """
-    entry_type = attr.ib(
-        validator=lambda _, __, value: isclass(value) and isinstance(value, Resource))
+    entry_type = attr.ib()
+
+    @entry_type.validator
+    def is_entry_type(self, attribute, value):
+        if not (isclass(value) and issubclass(value, Resource)):
+            raise TypeError("entry_type needs to be a Resource subclass")
 
     """ defines list of the resource objects """
-    entries = attr.ib(
-        type=list,
-        validator=lambda self, __, value: all(isinstance(v, self.entry_type) for v in value))
+    entries = attr.ib(type=list)
+
+    @entries.validator
+    def valiadate_entries(self, __, value):
+        for element in value:
+            if not isinstance(element, self.entry_type):
+                raise TypeError(element, self.entry_type)
 
     """ defines the field names that are displayed for each resource """
-    field_names = attr.ib(
-        type=list,
-        validator=lambda _, __, value: all(isinstance(value, basestring) for v in value))
+    field_names = attr.ib(type=list)
+
+    @field_names.validator
+    def validate_field_names(self, __, value):
+        for v in value:
+            if not isinstance(v, string_types):
+                raise ValueError(v)
 
     """ defines the fields that should be 'aligned left' when table is printed """
-    align_left = attr.ib(
-        type=list,
-        validator=lambda self, _, value: all(v in self.field_names for v in value))
+    align_left = attr.ib(type=list)
+
+    @align_left.validator
+    def validate_align_left(self, _, value):
+        for element in value:
+            if element not in self.field_names:
+                raise ValueError(element)
 
     """ method which takes an entry from this collection and builds a row (list) for the table """
     row_builder = attr.ib()
+
     @row_builder.validator
     def test_row(self, attribute, value):
         valid = False
@@ -64,6 +84,7 @@ class ResourceCollection(object):
 
     """ optional, method which takes all entries and totals certain fields """
     totals_row_builder = attr.ib(default=None)
+
     @totals_row_builder.validator
     def test_totaler(self, attribute, value):
         valid = False
@@ -84,8 +105,10 @@ class ResourceCollection(object):
         validator=optional(lambda _, __, value: isfunction(value)))
 
     # these should usually not be passed in by the caller and are populated by @properties below
-    _table = attr.ib(default=None, validator=optional(instance_of(PrettyTable)))
-    _table_with_totals = attr.ib(default=None, validator=optional(instance_of(PrettyTable)))
+    _table = attr.ib(default=None,
+                     validator=optional(instance_of(PrettyTable)))
+    _table_with_totals = attr.ib(default=None,
+                                 validator=optional(instance_of(PrettyTable)))
 
     @property
     def table(self):
@@ -155,7 +178,8 @@ class ResourceCollection(object):
         filtered_data_list = []
         for entry in entry_data_list:
             filtered_data = {
-                self.field_names[i]: data for i, data in enumerate(self.row_builder(entry))
+                self.field_names[i]: data
+                for i, data in enumerate(self.row_builder(entry))
             }
             filtered_data_list.append(filtered_data)
         return yaml.safe_dump(filtered_data_list, default_flow_style=False)
@@ -165,6 +189,7 @@ class ResourceCollection(object):
         Select an entry based on its displayed entry number in the table
         """
         return self.entries[number - 1]
+
 
 def issue_collection(issue_list):
     def row_builder(issue):
@@ -203,10 +228,10 @@ def issue_collection(issue_list):
 
     def totals_row_builder(issue_list):
         total_timespent = friendly_worklog_time(
-            sum(issue.fields.timespent for issue in issue_list if issue.fields.timespent)
+            sum(issue.fields.timespent or 0 for issue in issue_list)
         )
         total_timeest = friendly_worklog_time(
-            sum(issue.fields.timeestimate for issue in issue_list if issue.fields.timeestimate)
+            sum(issue.fields.timeestimate or 0 for issue in issue_list)
         )
         return ["", "", "", "", "", total_timespent, total_timeest]
 
