@@ -7,7 +7,7 @@ import sys
 import prompter
 
 from .common import editor_ignore_comments
-from .prompt import Prompt
+from .prompt import MainPrompt
 
 from .res import get_default_config, get_ascii_art
 
@@ -53,7 +53,7 @@ def main():
     print(get_ascii_art())
 
     sys.argv = sys.argv[:1] + unknown_args
-    Prompt(config_file=filename).cmdloop()
+    MainPrompt(config_file=filename).cmdloop()
 
 
 if __name__ == '__main__':

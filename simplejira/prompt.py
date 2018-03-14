@@ -1,17 +1,20 @@
 from __future__ import print_function
 
 import argparse
+import collections
+from functools import wraps
 
 import cmd2
 import prompter
 import yaml
+from undecorated import undecorated
 
 from .common import (
     editor_ignore_comments, sanitize_worklog_time, ctime_str_to_datetime
 )
+from .res import get_issue_template
 from .resource_collections import issue_collection, worklog_collection
 from .wrapper import JiraWrapper, InvalidLabelError
-from .res import get_issue_template
 
 
 def _selector(list_to_select_from, title):
@@ -44,7 +47,80 @@ def _selector(list_to_select_from, title):
     return input
 
 
-class Prompt(cmd2.Cmd):
+class BasePrompt(object, cmd2.Cmd):
+    """
+    Base class that other prompts are built on
+    """
+    @property
+    def cmd_shortcuts(self):
+        """
+        Return an OrderedDict of shortcuts to be set by classes extending BasePrompt
+
+        Example:
+        {'do_shortname': 'do_original_command',
+         'do_shortname2': 'do_other_command'}
+        """
+        return collections.OrderedDict()
+
+    def set_shortcuts(self):
+        """
+        Set command shortcuts
+
+        self.shortcuts.update(shortcuts) *should* work, but it was giving me issues... so
+        we'll go with this approach
+
+        We also ensure the shortcuts are hidden from 'help'
+        """
+        for shortcut, cmd in self.cmd_shortcuts.iteritems():
+            setattr(self, shortcut, getattr(self, cmd))
+            self.exclude_from_help.append(shortcut)
+
+    def print_cmds(self):
+        """
+        Print commands and their shortcuts along with a shortened description.
+        """
+        for shortcut, full_cmd_name in self.cmd_shortcuts.iteritems():
+            shortcut_name = shortcut.lstrip("do_")
+
+            # Get the description for this cmd, and 'undecorate' it to get the original docstring
+            # without the argparse stuff
+            docstring = undecorated(getattr(self, full_cmd_name)).__doc__
+
+            print(
+                "  {:>5} / {:<20} {}".format(shortcut_name, full_cmd_name.lstrip("do_"), docstring)
+            )
+
+    def do_quit(self, args):
+        """quit this prompt."""
+        # Main purpose of this is to just override the docstring
+        return cmd2.Cmd.do_quit(self, args)
+
+    def input(self, *args, **kwargs):
+        return prompter.prompt(*args, **kwargs)
+
+    def __init__(self):
+        cmd2.Cmd.__init__(self, use_ipython=False)
+        self.allow_cli_args = True
+        self.exclude_from_help += [
+            'do_load', 'do_py', 'do_pyscript', 'do_shell', 'do_set',
+            'do_shortcuts', 'do_history', 'do_edit',
+        ]
+        self.set_shortcuts()
+
+
+class MainPrompt(BasePrompt):
+    @property
+    def cmd_shortcuts(self):
+        od = collections.OrderedDict()
+        od['do_r'] = 'do_reload'
+        od['do_c'] = 'do_card'
+        od['do_n'] = 'do_new'
+        od['do_q'] = 'do_quit'
+        od['do_l'] = 'do_ls'
+        od['do_tw'] = 'do_todayswork'
+        od['do_yw'] = 'do_yesterdayswork'
+        return od
+
     def _init_jira(self):
         """
         Instantiates JiraWrapper and initializes it (loads properties)
@@ -54,14 +130,8 @@ class Prompt(cmd2.Cmd):
         self._jira = self._jw.jira
 
     def __init__(self, config_file):
-        self.abbrev = True
-        cmd2.Cmd.__init__(self, use_ipython=False)
+        super(MainPrompt, self).__init__()
         self.prompt = "(simplejira) "
-        self.allow_cli_args = True
-        self.exclude_from_help += [
-            'do_load', 'do_py', 'do_pyscript', 'do_shell', 'do_set',
-            'do_shortcuts', 'do_history', 'do_edit',
-        ]
 
         self.config_file = config_file
         self.issue_collection = None
@@ -69,10 +139,21 @@ class Prompt(cmd2.Cmd):
         self._init_jira()
 
         print("\nWelcome to simplejira!  We hope you have a BLAST.\n")
-        print("Type 'help' or '?' to get started.\n")
+        print("You are in the main prompt; commands you can use here:\n")
+        self.print_cmds()
+        print("\nUse 'help' or '?' for more details\n")
 
-    def input(self, *args, **kwargs):
-        return prompter.prompt(*args, **kwargs)
+    def requires_table(func):
+        """
+        Decorator which ensures an issue table has been generated before executing 'func'
+        """
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            if not self.issue_collection:
+                print("No issue table generated yet. Run 'ls' or 'search' first")
+            else:
+                func(self, *args, **kwargs)
+        return wrapper
 
     # -----------------
     # reload
@@ -100,6 +181,7 @@ class Prompt(cmd2.Cmd):
 
     @cmd2.with_argparser(ls_parser)
     def do_ls(self, args):
+        """list cards, with ability to filter on sprint or status"""
         sprint_id = None
         if args.sprint == "backlog":
             sprint_id = args.sprint
@@ -121,18 +203,17 @@ class Prompt(cmd2.Cmd):
                              help="Command to pass on to card prompt (optional)")
 
     @cmd2.with_argparser(card_parser)
+    @requires_table
     def do_card(self, args):
-        if not self.issue_collection:
-            print("No issue table generated yet. Run 'ls' or 'search' first.")
-            return
-        ce = CardEditor(self._jw, self.issue_collection.select(args.number))
+        """enter card prompt or run command against a card"""
+        cp = CardPrompt(self._jw, self.issue_collection.select(args.number))
         if args.cmd:
-            ce.onecmd(" ".join(args.cmd))
+            cp.onecmd(" ".join(args.cmd))
         else:
-            ce.cmdloop()
+            cp.cmdloop()
 
     # -----------------
-    # create
+    # new
     # -----------------
     create_parser = argparse.ArgumentParser()
     create_parser.add_argument('-e', '--editor', default=False, action="store_true",
@@ -149,7 +230,8 @@ class Prompt(cmd2.Cmd):
                                help='Estimated time remaining, e.g. "5h30m"')
 
     @cmd2.with_argparser(create_parser)
-    def do_create(self, args):
+    def do_new(self, args):
+        """create a new card to be assigned to a sprint/backlog"""
         curr_sprint_name = self._jw.current_sprint_name
         myid = self._jw.userid
 
@@ -193,59 +275,48 @@ class Prompt(cmd2.Cmd):
             self._jw.create_issue(**kwargs)
 
     # -----------------
-    # edit
-    # -----------------
-    '''
-    TODO
-    def do_edit(self, args):
-        """edit card details (opens editor)"""
-        print(editor_ignore_comments(self.issue_collection.to_yaml()))
-    '''
-
-    # -----------------
     # todayswork
     # -----------------
+    @requires_table
     def do_todayswork(self, args):
         """show all work log entries logged today for a generated issue table"""
-        if not self.issue_collection:
-            print("No issue table generated yet. Run 'ls' or 'search' first")
-            return
         worklog_collection(
             self._jw.get_todays_worklogs(self.issue_collection.entries)).print_table()
 
+    # -----------------
+    # yesterdayswork
+    # -----------------
+    def do_yesterdayswork(self, args):
+        """show all work log entries logged yesterday for a generated issue table"""
+        pass
 
-class CardEditor(cmd2.Cmd):
+
+class CardPrompt(BasePrompt):
+    """
+    Prompt used for performing actions against a single card.
+    """
+    @property
+    def cmd_shortcuts(self):
+        od = collections.OrderedDict()
+        od['do_l'] = 'do_ls'
+        od['do_log'] = 'do_logwork'
+        od['do_lsw'] = 'do_lswork'
+        od['do_e'] = 'do_editwork'
+        od['do_t'] = 'do_timeleft'
+        od['do_c'] = 'do_component'
+        od['do_al'] = 'do_addlabels'
+        od['do_rl'] = 'do_rmlabels'
+        od['do_s'] = 'do_status'
+        od['do_b'] = 'do_backlog'
+        od['do_p'] = 'do_pull'
+        od['do_r'] = 'do_remove'
+        od['do_a'] = 'do_assign'
+        od['do_q'] = 'do_quit'
+        return od
+
     def __init__(self, jira_wrapper, issue):
-        self.abbrev = True
-        self.cmd_shortcuts = {
-            'do_1': 'do_ls',
-            'do_2': 'do_logwork',
-            'do_3': 'do_lswork',
-            'do_4': 'do_editwork',
-            'do_5': 'do_timeleft',
-            'do_6': 'do_component',
-            'do_7': 'do_addlabel',
-            'do_8': 'do_rmlabels',
-            'do_9': 'do_status',
-            'do_10': 'do_backlog',
-            'do_11': 'do_pull',
-            'do_12': 'do_remove',
-            'do_13': 'do_assign',
-            'do_14': 'do_exit',
-        }
-
-        # self.shortcuts.update(self.cmd_shortcuts)
-        # ^^ this isn't working ... so let's try this:
-        for shortcut, cmd in self.cmd_shortcuts.iteritems():
-            setattr(self, shortcut, getattr(self, cmd))
-
-        cmd2.Cmd.__init__(self, use_ipython=False)
-
+        super(CardPrompt, self).__init__()
         self.prompt = "(card {}) ".format(issue.key)
-        self.exclude_from_help += [
-            'do_load', 'do_py', 'do_pyscript', 'do_shell', 'do_set',
-            'do_shortcuts', 'do_history', 'do_edit',
-        ]
 
         self._jw = jira_wrapper
         self._jira = self._jw.jira
@@ -255,33 +326,18 @@ class CardEditor(cmd2.Cmd):
     def input(self, *args, **kwargs):
         return prompter.prompt(*args, **kwargs)
 
-    def _print_cmds(self):
-        # Print all the commands that can be run against a card
-        # We build this list dynamically, based on what shortcuts are defined in self.cmd_shortcuts
+    def cmdloop(self, *args, **kwargs):
+        """
+        Override to print cmds when prompt starts
+        """
         print(
-            "\nEditing card {}, select what you want to do (enter number or command):".format(
+            "\nIn card prompt for '{}'; commands you can use here:\n".format(
                 self.issue.key)
         )
 
-        for shortcut_num in range(1, len(self.cmd_shortcuts) + 1):
-            full_cmd_name = self.cmd_shortcuts["do_" + str(shortcut_num)]
+        self.print_cmds()
 
-            # Get the description for this cmd
-            docstring = getattr(self, full_cmd_name).__doc__
-            if "usage" in docstring:
-                # This method is using argparse decorator, which adds additional docstring text,
-                # so just pull the short description out
-                docstring = docstring.split('\n')[2]
-
-            print("  {} / {}\t -- {}".format(shortcut_num, full_cmd_name.lstrip("do_"), docstring))
-
-        print("\nUse 'exit' to get back to main prompt\n")
-
-    def cmdloop(self, *args, **kwargs):
-        """
-        Print cmds when prompt starts
-        """
-        self._print_cmds()
+        print("\nUse 'quit' to get back to main prompt\n")
         cmd2.Cmd.cmdloop(self, *args, **kwargs)
 
     def do_exit(self, args):
@@ -384,7 +440,7 @@ class CardEditor(cmd2.Cmd):
     label_parser.add_argument('label_names', const=None, type=str, nargs='*')
 
     @cmd2.with_argparser(label_parser)
-    def do_addlabel(self, args):
+    def do_addlabels(self, args):
         """add label(s)"""
         if not args.label_names:
             c_l_map = self._jw.component_labels_map
