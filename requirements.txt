@@ -13,4 +13,5 @@ requests>=2.18.4
 pbr>=3.1.1
 requests_kerberos>=0.12.0
 setuptools_scm>=1.15.7
+undecorated>=0.3.0
 -e .
