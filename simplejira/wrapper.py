@@ -120,7 +120,7 @@ class IssueFields(object):
 
         d = {'project': {}}    
 
-        for key, value in kwargs.iteritems():
+        for key, value in kwargs.items():
             if value:
                 d['project'][key] = value
 
@@ -395,7 +395,7 @@ class JiraWrapper(object):
         try:
             d = {
                 k.lower(): [l.lower() for l in v]
-                for k, v in self.config['components_labels_map'].iteritems()
+                for k, v in self.config['components_labels_map'].items()
             }
         except KeyError:
             d = {}

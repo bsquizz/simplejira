@@ -47,7 +47,7 @@ def _selector(list_to_select_from, title):
     return input
 
 
-class BasePrompt(object, cmd2.Cmd):
+class BasePrompt(cmd2.Cmd, object):
     """
     Base class that other prompts are built on
     """
@@ -71,7 +71,7 @@ class BasePrompt(object, cmd2.Cmd):
 
         We also ensure the shortcuts are hidden from 'help'
         """
-        for shortcut, cmd in self.cmd_shortcuts.iteritems():
+        for shortcut, cmd in self.cmd_shortcuts.items():
             setattr(self, shortcut, getattr(self, cmd))
             self.exclude_from_help.append(shortcut)
 
@@ -79,7 +79,7 @@ class BasePrompt(object, cmd2.Cmd):
         """
         Print commands and their shortcuts along with a shortened description.
         """
-        for shortcut, full_cmd_name in self.cmd_shortcuts.iteritems():
+        for shortcut, full_cmd_name in self.cmd_shortcuts.items():
             shortcut_name = shortcut.lstrip("do_")
 
             # Get the description for this cmd, and 'undecorate' it to get the original docstring
