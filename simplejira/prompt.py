@@ -271,7 +271,8 @@ class MainPrompt(BasePrompt):
             confirm = prompter.yesno("Use these labels anyway?")
             if not confirm:
                 del kwargs['labels']
-                print("Removed labels from the issue, please use 'addlabels' later to add proper labels")
+                print("Removed labels from the issue, please use 'addlabels' later to add proper "
+                      "labels")
             self._jw.create_issue(**kwargs)
 
     # -----------------
@@ -286,6 +287,7 @@ class MainPrompt(BasePrompt):
     # -----------------
     # yesterdayswork
     # -----------------
+    @requires_table
     def do_yesterdayswork(self, args):
         """show all work log entries logged yesterday for a generated issue table"""
         worklog_collection(
