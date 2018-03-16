@@ -1,21 +1,62 @@
-simplejira
+# simplejira
 
-COMPLETELY A WORK IN PROGRESS
+**COMPLETELY A WORK IN PROGRESS**
 
-A CLI-based tool for making agile in jira a little more... simple
+A CLI-based tool for making agile in jira a little more... simple. simplejira runs on either Python
+2.7 or 3.5 and higher.
 
-This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be useful for you too.
+This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be
+useful for you too.
 
-Make sure you have these dependencies installed for Python 2 (e.x., on fedora):
+## Dependencies
+You'll need the Python headers and the Kerberos headers installed in order to install simplejira's
+dependencies.
 
-` $ dnf install gcc redhat-rpm-config python2-devel krb5-devel which binutils`
+### Fedora
 
-If you're using Python 3, you'll need to install `python3-devel` instead of `python2-devel`.
+```
+$ sudo dnf install gcc redhat-rpm-config python2-devel krb5-devel which binutils
+```
 
-Install with:
+### Debian
 
-` $ pip install -r requirements.txt`
+```
+$ sudo apt install build-essential python2-dev libkrb5-dev
+```
 
-If you have issues with SSL validation, the config supplies a field for the CA trust cert path. You can also comment
-out this line to use your system default. On Fedora, you can `dnf install python-requests` to install a patched version
-of requests that is already pointed toward the Fedora CA cert bundle by default.
+### Python 3
+
+If you want to use Python 3 instead of Python 2, you'll need to install `python3-devel` on Fedora,
+or `python3-dev` on Debian.
+
+## Installing
+
+To install simplejira and the rest of its dependencies, you'll need to set up a virtual environment
+and install the dependencies from `requirements.txt`.
+
+```
+$ virtualenv env
+$ env/bin/pip install -r requirements.txt
+```
+
+Lastly, install simplejira itself.
+
+```
+$ env/bin/python setup.py install
+```
+
+## Development
+
+If you want to hack on simplejira, you can do a development install with `pip` instead of the
+install command above, like so:
+
+```
+$ env/bin/pip install -e .
+```
+
+## SSL Validation
+
+If you have issues with SSL validation, the config supplies a field for the CA trust cert path. You
+can also comment out this line to use your system default. On Fedora, you can run
+`dnf install python-requests` to install a patched version of requests that is already pointed
+toward the Fedora CA cert bundle by default.
