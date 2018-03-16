@@ -6,9 +6,11 @@ A CLI-based tool for making agile in jira a little more... simple
 
 This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be useful for you too.
 
-Make sure you have these dependencies installed (e.x., on fedora):
+Make sure you have these dependencies installed for Python 2 (e.x., on fedora):
 
 ` $ dnf install gcc redhat-rpm-config python2-devel krb5-devel which binutils`
+
+If you're using Python 3, you'll need to install `python3-devel` instead of `python2-devel`.
 
 Install with:
 
