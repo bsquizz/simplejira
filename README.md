@@ -45,6 +45,17 @@ Lastly, install simplejira itself.
 $ env/bin/python setup.py install
 ```
 
+## Running
+
+To run simplejira, just run the `simplejira` command in the `bin` directory of your virtual
+environment.
+
+```
+$ env/bin/simplejira
+```
+
+The first time you run simplejira, it will set up a new configuration for you.
+
 ## Development
 
 If you want to hack on simplejira, you can do a development install with `pip` instead of the
