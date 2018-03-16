@@ -26,8 +26,8 @@ $ sudo apt install build-essential python2-dev libkrb5-dev
 
 ### Python 3
 
-If you want to use Python 3 instead of Python 2, you'll need to install `python3-devel` on Fedora,
-or `python3-dev` on Debian.
+If you want to use Python 3 instead of Python 2, you'll need to install `python3-devel` instead of
+`python2-devel` on Fedora, or `python3-dev` instead of `python2-dev` on Debian.
 
 ## Installing
 
