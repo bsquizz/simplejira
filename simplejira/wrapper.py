@@ -516,7 +516,7 @@ class JiraWrapper(object):
 
     def create_issue(self, summary, details=None, component=None,
                      labels=None, assignee=None, sprint=None, timeleft=None,
-                     issuetype="Story", force_labels=False):
+                     issuetype='Task', force_labels=False):
         """
         Create an issue (by default, a Story) in the agile sprint.
 

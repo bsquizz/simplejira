@@ -13,3 +13,5 @@ timeleft: "2h30m"
 assignee: ""
 # Leave this blank to use current sprint
 sprint: ""
+# Valid values: Bug, Task, Story, Epic. Defaults to Task
+issuetype: ""

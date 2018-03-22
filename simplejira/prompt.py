@@ -228,6 +228,8 @@ class MainPrompt(BasePrompt):
                                help='Sprint name, sprint number, or "blacklog". Default=current')
     create_parser.add_argument('-T', '--timeleft', type=str, default=None,
                                help='Estimated time remaining, e.g. "5h30m"')
+    create_parser.add_argument('-t', '--issue-type', type=str, default='Task',
+                               help='Issue type, one of Task, Story, Bug, Epic. Default=Task')
 
     @cmd2.with_argparser(create_parser)
     def do_new(self, args):
@@ -247,6 +249,8 @@ class MainPrompt(BasePrompt):
                 kwargs['sprint'] = curr_sprint_name
             if not kwargs['assignee']:
                 kwargs['assignee'] = myid
+            if not kwargs['issuetype']:
+                kwargs['issuetype'] = 'Task'
         else:
             curr_sprint_name = self._jw.current_sprint_name
             print("Enter issue details below. Hit Ctrl+C to cancel and return to prompt.")
@@ -263,6 +267,7 @@ class MainPrompt(BasePrompt):
             kwargs['sprint'] = self.input("Sprint name, id, or 'backlog':",
                                           default=curr_sprint_name)
             kwargs['timeleft'] = self.input("Time left (e.g. 2h30m)", default="")
+            kwargs['issuetype'] = self.input('Type (Task, Story, Bug, Epic)', default='Task')
 
         try:
             self._jw.create_issue(**kwargs)
@@ -293,6 +298,7 @@ class MainPrompt(BasePrompt):
         """show all work log entries logged yesterday for a generated issue table"""
         worklog_collection(
             self._jw.get_yesterdays_worklogs(self.issue_collection.entries)).print_table()
+
 
 class CardPrompt(BasePrompt):
     """
