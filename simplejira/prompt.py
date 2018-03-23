@@ -17,7 +17,7 @@ from .resource_collections import issue_collection, worklog_collection
 from .wrapper import JiraWrapper, InvalidLabelError
 
 
-def _selector(list_to_select_from, title):
+def _selector(list_to_select_from, title, default=''):
     if len(list_to_select_from) == 0:
         return prompter.prompt(title, default="")
 
@@ -27,8 +27,8 @@ def _selector(list_to_select_from, title):
     for entry in enumerated:
         print("  {} / {}".format(entry[0], entry[1]))
 
-    def get_valid_input():
-        input = prompter.prompt("enter selection", default="")
+    def get_valid_input(default):
+        input = prompter.prompt("enter selection", default=default)
 
         if input.isdigit():
             input = int(input)
@@ -43,7 +43,7 @@ def _selector(list_to_select_from, title):
     print("Enter name, number, type in your own, or leave blank: ")
     input = None
     while not input:
-        input = get_valid_input()
+        input = get_valid_input(default)
     return input
 
 
@@ -267,7 +267,8 @@ class MainPrompt(BasePrompt):
             kwargs['sprint'] = self.input("Sprint name, id, or 'backlog':",
                                           default=curr_sprint_name)
             kwargs['timeleft'] = self.input("Time left (e.g. 2h30m)", default="")
-            kwargs['issuetype'] = self.input('Type (Task, Story, Bug, Epic)', default='Task')
+            kwargs['issuetype'] = _selector(['Task', 'Story', 'Bug', 'Epic'], 'Enter issue type',
+                                            default='Task')
 
         try:
             self._jw.create_issue(**kwargs)
