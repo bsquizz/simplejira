@@ -2,7 +2,7 @@
 
 **COMPLETELY A WORK IN PROGRESS**
 
-A CLI-based tool that helps you quickly handle basic agile workflows for boards hosted on JIRA. jiraprompt runs on either Python
+A CLI-based tool that gives quick access to basic agile workflows for a JIRA board. jiraprompt runs on either Python
 2.7 or 3.5 and higher.
 
 This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be
