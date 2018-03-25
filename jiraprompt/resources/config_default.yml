@@ -1,0 +1,30 @@
+# Default config for the Red Hat CFME-QE team.
+
+# Define auth settings. Username/password only needed if doing basic authentication
+auth:
+  kerberos: true
+  basic_auth: false
+  username: null
+  # NOTE: password is stored in plain text! Use kerberos if you can. Otherwise,
+  # leave the password as 'null' if you want to type it in every time you start
+  # for a more secure option
+  password: null
+
+# Name or ID of agile board
+board: "CloudForms QE Sprints"
+
+# Name, key, or ID of project
+project: "Red Hat CloudForms QE"
+
+# JIRA server base URL
+url: https://projects.engineering.redhat.com
+
+# Path to certificate authority trust file
+ca_cert_path: "/etc/ssl/certs/ca-bundle.crt"
+
+# Whether or not to validate SSL certs when connecting to JIRA
+verify_ssl: True
+
+# Whether or not to check that components have valid labels (using your labels file)
+label_check: True
+

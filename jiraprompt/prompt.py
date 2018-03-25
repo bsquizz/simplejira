@@ -125,20 +125,22 @@ class MainPrompt(BasePrompt):
         """
         Instantiates JiraWrapper and initializes it (loads properties)
         """
-        self._jw = JiraWrapper(config_file=self.config_file)
+        self._jw = JiraWrapper(
+            config_file=self.config_file, labels_file=self.labels_file)
         self._jw.init()
         self._jira = self._jw.jira
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, labels_file):
         super(MainPrompt, self).__init__()
-        self.prompt = "(simplejira) "
+        self.prompt = "(jiraprompt) "
 
         self.config_file = config_file
+        self.labels_file = labels_file
         self.issue_collection = None
 
         self._init_jira()
 
-        print("\nWelcome to simplejira!  We hope you have a BLAST.\n")
+        print("\nWelcome to jiraprompt!  We hope you have a BLAST.\n")
         print("You are in the main prompt; commands you can use here:\n")
         self.print_cmds()
         print("\nUse 'quit' to exit.  Use 'help' or '?' for more details\n")

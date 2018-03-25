@@ -1,13 +1,13 @@
 from setuptools import setup
 
 setup(
-    name='simplejira',
+    name='jiraprompt',
     use_scm_version=True,
-    description='simplejira',
+    description='jiraprompt',
     author='Brandon Squizzato',
     author_email='bsquizza@redhat.com',
-    url='https://www.github.com/bsquizz/simplejira',
-    packages=['simplejira'],
+    url='https://www.github.com/bsquizz/jiraprompt',
+    packages=['jiraprompt'],
     setup_requires=[
         'setuptools_scm'
     ],
@@ -27,6 +27,8 @@ setup(
         'requests',
         'pbr',
         'requests-kerberos',
+        'undecorated',
+        'pathlib2',
     ],
-    scripts=['bin/simplejira']
+    scripts=['bin/jiraprompt']
 )

@@ -134,7 +134,10 @@ class JiraWrapper(object):
     Provides utils for storing config and interacting with python-jira
     """
     config_file = attr.ib()
-    config = attr.ib(default=attr.Factory(dict))
+    labels_file = attr.ib()
+
+    _config = attr.ib(default=attr.Factory(dict))
+    _component_labels_map = attr.ib(default=attr.Factory(dict))
     _jira = attr.ib(default=None)
     _current_sprint_id = attr.ib(default=0)
     _current_sprint_name = attr.ib(type=str, default=None)
@@ -142,38 +145,34 @@ class JiraWrapper(object):
     _project_id = attr.ib(default=0)
     _userid = attr.ib(type=str, default=None)
 
-
-    def load_config(self, filename):
-        """
-        Loads YAML config
-        """
-        with open(filename, 'r') as f:
-            self.config = yaml.safe_load(f)
-
     def __attrs_post_init__(self):
         """
-        After object instantiation, load config file
+        After object instantiation, load config files
         """
-        self.load_config(self.config_file)
+        with open(self.config_file, 'r') as f:
+            self._config = yaml.safe_load(f)
+        if self.labels_file:
+            with open(self.labels_file, 'r') as f:
+                self._component_labels_map = yaml.safe_load(f)
 
     @property
     def jira_url(self):
         """
         Server URL being used for JIRA.
         """
-        return self.config['url']
+        return self._config['url']
 
     @property
     def label_check(self):
         try:
-            return self.config['label_check']
+            return self._config['label_check']
         except KeyError:
             return False
 
     @property
     def verify_ssl(self):
         try:
-            return self.config['verify_ssl']
+            return self._config['verify_ssl']
         except KeyError:
             return True
 
@@ -185,7 +184,7 @@ class JiraWrapper(object):
         if not self._jira:
             print("Connecting to jira at", self.jira_url)
             kwargs = {}
-            cfg = self.config
+            cfg = self._config
             auth_cfg = cfg['auth']
             kwargs['validate'] = False
 
@@ -202,8 +201,8 @@ class JiraWrapper(object):
                 kwargs['kerberos_options'] = {'mutual_authentication': "DISABLED"}
 
             kwargs['options'] = {'server': self.jira_url}
-            if 'ca_cert_path' in self.config:
-                kwargs['options']['verify'] = self.config['ca_cert_path']
+            if 'ca_cert_path' in self._config:
+                kwargs['options']['verify'] = self._config['ca_cert_path']
             if self.verify_ssl is False:
                 print("Warning: SSL certificate verification is disabled!")
                 kwargs['options']['verify'] = False
@@ -219,7 +218,7 @@ class JiraWrapper(object):
     def board_id(self):
         if not self._board_id:
             try:
-                cfgboard = str(self.config['board']).lower()
+                cfgboard = str(self._config['board']).lower()
             except KeyError:
                 raise KeyError("config has no 'board' defined!")
 
@@ -231,14 +230,14 @@ class JiraWrapper(object):
                     break
 
             if not self._board_id:
-                raise ValueError("Unable to find board '{}'".format(self.config['board']))
+                raise ValueError("Unable to find board '{}'".format(self._config['board']))
         return self._board_id
 
     @property
     def project_id(self):
         if not self._project_id:
             try:
-                cfgproject = str(self.config['project']).lower()
+                cfgproject = str(self._config['project']).lower()
             except KeyError:
                 raise KeyError("config has no 'project' defined!")
 
@@ -250,7 +249,7 @@ class JiraWrapper(object):
                     break
 
             if not self._project_id:
-                raise ValueError("Unable to find project '{}'".format(self.config['project']))
+                raise ValueError("Unable to find project '{}'".format(self._config['project']))
         return self._project_id
 
     @property
@@ -403,13 +402,13 @@ class JiraWrapper(object):
     @property
     def component_labels_map(self):
         try:
-            d = {
+            lowercase_data = {
                 k.lower(): [l.lower() for l in v]
-                for k, v in self.config['components_labels_map'].items()
+                for k, v in self._component_labels_map.items()
             }
         except KeyError:
-            d = {}
-        return d
+            lowercase_data = {}
+        return lowercase_data
 
     def find_component(self, txt):
         """

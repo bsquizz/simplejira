@@ -1,6 +1,6 @@
 This file is used to track project TODO's
 
-* editing other details of a card (e.g. title, description -- via prompt if short, otherwise the text editor would be opened if desired -- the simplejira.common.editor_ignore_comments() method can be used here as it is in other areas)
+* editing other details of a card (e.g. title, description -- via prompt if short, otherwise the text editor would be opened if desired -- the jiraprompt.common.editor_ignore_comments() method can be used here as it is in other areas)
 * editing entire card ~~and entire worklog~~ (only for the details we care about, via opening an editor)
     - this requires the 'updater' process on ResourceCollection class to be fully built out (maybe? didn't use this approach for worklogs.)
     - the idea is the fields from the collection are converted to yaml (see ResourceCollection.convert_to_yaml()), the editor is opened to allow

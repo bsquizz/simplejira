@@ -1,15 +1,15 @@
-# simplejira
+# jiraprompt
 
 **COMPLETELY A WORK IN PROGRESS**
 
-A CLI-based tool for making agile in jira a little more... simple. simplejira runs on either Python
+A CLI-based tool that helps you quickly handle basic agile workflows for boards hosted on JIRA. jiraprompt runs on either Python
 2.7 or 3.5 and higher.
 
 This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be
 useful for you too.
 
 ## Dependencies
-You'll need the Python headers and the Kerberos headers installed in order to install simplejira's
+You'll need the Python headers and the Kerberos headers installed in order to install jiraprompt's
 dependencies.
 
 ### Fedora
@@ -31,7 +31,7 @@ If you want to use Python 3 instead of Python 2, you'll need to install `python3
 
 ## Installing
 
-To install simplejira and the rest of its dependencies, you'll need to set up a virtual environment
+To install jiraprompt and the rest of its dependencies, you'll need to set up a virtual environment
 and install the dependencies from `requirements.txt`.
 
 ```
@@ -39,7 +39,7 @@ $ virtualenv env
 $ env/bin/pip install -r requirements.txt
 ```
 
-Lastly, install simplejira itself.
+Lastly, install jiraprompt itself.
 
 ```
 $ env/bin/python setup.py install
@@ -47,18 +47,18 @@ $ env/bin/python setup.py install
 
 ## Running
 
-To run simplejira, just run the `simplejira` command in the `bin` directory of your virtual
+To run jiraprompt, just run the `jiraprompt` command in the `bin` directory of your virtual
 environment.
 
 ```
-$ env/bin/simplejira
+$ env/bin/jiraprompt
 ```
 
-The first time you run simplejira, it will set up a new configuration for you.
+The first time you run jiraprompt, it will set up a new configuration for you.
 
 ## Development
 
-If you want to hack on simplejira, you can do a development install with `pip` instead of the
+If you want to hack on jiraprompt, you can do a development install with `pip` instead of the
 install command above, like so:
 
 ```
