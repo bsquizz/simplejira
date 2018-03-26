@@ -9,7 +9,7 @@ setup(
     author_email='bsquizza@redhat.com',
     url='https://www.github.com/bsquizz/jiraprompt',
     packages=['jiraprompt'],
-    keywords=['jira', 'agile']
+    keywords=['jira', 'agile'],
     setup_requires=[
         'setuptools_scm',
     ],
