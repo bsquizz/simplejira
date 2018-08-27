@@ -31,7 +31,7 @@ def _get_config_path():
 def _write_config_file(filename, txt):
     path = _get_config_path().joinpath(filename)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    path.write_text(txt.decode('utf8'))
+    path.write_text(txt.encode('utf8').decode('utf8'))
     path.chmod(0o600)
     return path
 
