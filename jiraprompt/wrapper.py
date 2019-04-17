@@ -486,8 +486,13 @@ class JiraWrapper(object):
           tuple of (component_name, component_id)
         """
         components = self.jira.project_components(self.project_id)
+        # First, try exact match
         for c in components:
-            if (str(txt).isdigit and str(c.id) == str(txt)) or str(txt).lower() in c.name.lower():
+            if (str(txt).isdigit and str(c.id) == str(txt)) or str(txt).lower() == c.name.lower():
+                return c.name, c.id
+        # Second, if we are still here, try fuzzy match
+        for c in components:
+            if str(txt).lower() in c.name.lower():
                 return c.name, c.id
         raise ValueError("Unable to find component with text: ", str(txt))
 
