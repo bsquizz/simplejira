@@ -2,8 +2,8 @@
 
 **COMPLETELY A WORK IN PROGRESS**
 
-A CLI-based tool that gives quick access to basic agile workflows for a JIRA board. jiraprompt runs on either Python
-2.7 or 3.5 and higher.
+A CLI-based tool that gives quick access to basic agile workflows for a JIRA board. jiraprompt runs on Python
+ 3.6 and higher.
 
 This is a project used by the Red Hat CloudForms QE team to make their life easier. It might be
 useful for you too.
@@ -15,26 +15,21 @@ dependencies.
 ### Fedora
 
 ```
-$ sudo dnf install gcc redhat-rpm-config python2-devel krb5-devel which binutils
+$ sudo dnf install gcc redhat-rpm-config python3-devel krb5-devel which binutils
 ```
 
 ### Debian
 
 ```
-$ sudo apt install build-essential python2-dev libkrb5-dev
+$ sudo apt install build-essential python3-dev libkrb5-dev
 ```
-
-### Python 3
-
-If you want to use Python 3 instead of Python 2, you'll need to install `python3-devel` instead of
-`python2-devel` on Fedora, or `python3-dev` instead of `python2-dev` on Debian.
 
 ## Installing
 
 To install jiraprompt and the rest of its dependencies, it is recommended you set up a virtual environment
 
 ```
-$ virtualenv env
+$ python3.6 -m venv env
 ```
 
 The package is available on pypi, so you can simply run:

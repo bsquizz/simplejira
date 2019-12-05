@@ -10,7 +10,6 @@ six>=1.11.0
 pykerberos>=1.2.1
 python.dateutil>=2.6.1
 requests>=2.18.4
-pbr>=3.1.1
 requests_kerberos>=0.12.0
 setuptools_scm>=1.15.7
 undecorated>=0.3.0

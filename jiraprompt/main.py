@@ -4,7 +4,7 @@ import argparse
 import os
 import sys
 
-from pathlib2 import Path
+from pathlib import Path
 import prompter
 import yaml
 
