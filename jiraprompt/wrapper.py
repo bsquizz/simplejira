@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import getpass
 import warnings
 
@@ -9,8 +7,10 @@ from jira import JIRA
 from jira.exceptions import JIRAError
 from jira.resilientsession import ResilientSession
 
-from .common import (
-    iso_time_is_today, sanitize_worklog_time, friendly_worklog_time, iso_time_is_yesterday)
+from .common import friendly_worklog_time
+from .common import iso_time_is_today
+from .common import iso_time_is_yesterday
+from .common import sanitize_worklog_time
 
 
 class InvalidLabelError(Exception):
@@ -27,6 +27,7 @@ class ResilientSessionWithAuthCheck(ResilientSession):
     """
     Extends the python-jira ResilientSession to reset our session's cookies when auth epxires.
     """
+
     def __init__(self, resilient_session_obj, jira_client_args, jira_client_kwargs):
         """
         Constructor.
@@ -68,11 +69,12 @@ class ResilientSessionWithAuthCheck(ResilientSession):
 
         Yeah, overriding a name mangled method is ugly. Perhaps I'll push this upstream soon :)
         """
-        if hasattr(response, 'status_code') and response.status_code == 401:
+        if hasattr(response, "status_code") and response.status_code == 401:
             print("Session expired, attempting to refresh...")
             self.get_new_cookies()
         return super(ResilientSessionWithAuthCheck, self)._ResilientSession__recoverable(
-            response, *args, **kwargs)
+            response, *args, **kwargs
+        )
 
 
 class JiraClientOverride(JIRA):
@@ -93,7 +95,7 @@ class JiraClientOverride(JIRA):
         """
         super(JiraClientOverride, self)._create_kerberos_session(*args, **kwargs)
         print("Attempting to authenticate with kerberos...")
-        r = self._session.get("{}/step-auth-gss".format(self._options['server']))
+        r = self._session.get("{}/step-auth-gss".format(self._options["server"]))
         if r.status_code == 200:
             print("Authenticated successfully")
 
@@ -109,81 +111,66 @@ class IssueFields(object):
     f = IssueFields().labels(['something1', 'something2']).component("LOL").summary("my summary")
     issue.update(**f.kwarg)
     """
+
     def __init__(self):
-        self._base = {'fields': {}}
-        self.fields = self._base['fields']
+        self._base = {"fields": {}}
+        self.fields = self._base["fields"]
 
     @property
     def kwarg(self):
         return self._base
 
     def timetracking(self, remaining, original):
-        self.fields.update({
-            'timetracking': {
-                'remainingEstimate': sanitize_worklog_time(str(remaining)),
-                'originalEstimate': sanitize_worklog_time(str(original))
+        self.fields.update(
+            {
+                "timetracking": {
+                    "remainingEstimate": sanitize_worklog_time(str(remaining)),
+                    "originalEstimate": sanitize_worklog_time(str(original)),
+                }
             }
-        })
+        )
         return self
 
     def component(self, component_name):
         if component_name:
-            self.fields.update({
-                'components': [
-                    {'name': component_name}
-                ]
-            })
+            self.fields.update({"components": [{"name": component_name}]})
         return self
 
     def labels(self, label_list):
         if label_list:
-            self.fields.update({
-                'labels': label_list
-            })
+            self.fields.update({"labels": label_list})
         return self
 
     def summary(self, summary_text):
         if summary_text:
-            self.fields.update({
-                'summary': summary_text
-            })
+            self.fields.update({"summary": summary_text})
         return self
 
     def description(self, description_text):
         if description_text:
-            self.fields.update({
-                'description': description_text
-            })
+            self.fields.update({"description": description_text})
         return self
 
     def assignee(self, name):
         if name:
-            self.fields.update({
-                'assignee': {
-                    'name': name
-                }
-            })
+            self.fields.update({"assignee": {"name": name}})
         return self
 
     def issuetype(self, name):
         if name:
-            self.fields.update({
-                'issuetype': {
-                    'name': name
-                }
-            })
+            self.fields.update({"issuetype": {"name": name}})
         return self
 
     def project(self, name=None, key=None, id=None):
-        kwargs = {'name': name, 'key': key, 'id': id}
+        kwargs = {"name": name, "key": key, "id": id}
         if not any(kwargs.values()):
             raise ValueError("project needs at least 1 of: [name, key, id] defined")
 
-        d = {'project': {}}
+        d = {"project": {}}
 
         for key, value in kwargs.items():
             if value:
-                d['project'][key] = value
+                d["project"][key] = value
 
         self.fields.update(d)
         return self
@@ -194,6 +181,7 @@ class JiraWrapper(object):
     """
     Provides utils for storing config and interacting with python-jira
     """
+
     config_file = attr.ib()
     labels_file = attr.ib()
 
@@ -210,10 +198,10 @@ class JiraWrapper(object):
         """
         After object instantiation, load config files
         """
-        with open(self.config_file, 'r') as f:
+        with open(self.config_file, "r") as f:
             self._config = yaml.safe_load(f)
         if self.labels_file:
-            with open(self.labels_file, 'r') as f:
+            with open(self.labels_file, "r") as f:
                 self._component_labels_map = yaml.safe_load(f)
 
     @property
@@ -221,19 +209,19 @@ class JiraWrapper(object):
         """
         Server URL being used for JIRA.
         """
-        return self._config['url']
+        return self._config["url"]
 
     @property
     def label_check(self):
         try:
-            return self._config['label_check']
+            return self._config["label_check"]
         except KeyError:
             return False
 
     @property
     def verify_ssl(self):
         try:
-            return self._config['verify_ssl']
+            return self._config["verify_ssl"]
         except KeyError:
             return True
 
@@ -246,30 +234,31 @@ class JiraWrapper(object):
             print("Connecting to jira at", self.jira_url)
             kwargs = {}
             cfg = self._config
-            auth_cfg = cfg['auth']
-            kwargs['validate'] = False
+            auth_cfg = cfg["auth"]
+            kwargs["validate"] = False
 
-            if 'basic_auth' in auth_cfg and auth_cfg['basic_auth'] is True:
+            if "basic_auth" in auth_cfg and auth_cfg["basic_auth"] is True:
                 print("Using basic authentication")
-                if 'password' in auth_cfg and auth_cfg['password']:
-                    password = auth_cfg['password']
+                if "password" in auth_cfg and auth_cfg["password"]:
+                    password = auth_cfg["password"]
                 else:
                     password = getpass.getpass("Enter your JIRA password: ")
-                kwargs['basic_auth'] = (auth_cfg['username'], password)
+                kwargs["basic_auth"] = (auth_cfg["username"], password)
             else:
                 print("Using kerberos authentication")
-                kwargs['kerberos'] = True
-                kwargs['kerberos_options'] = {'mutual_authentication': "DISABLED"}
+                kwargs["kerberos"] = True
+                kwargs["kerberos_options"] = {"mutual_authentication": "DISABLED"}
 
-            kwargs['options'] = {'server': self.jira_url}
-            if 'ca_cert_path' in self._config:
-                kwargs['options']['verify'] = self._config['ca_cert_path']
+            kwargs["options"] = {"server": self.jira_url}
+            if "ca_cert_path" in self._config:
+                kwargs["options"]["verify"] = self._config["ca_cert_path"]
             if self.verify_ssl is False:
                 print("Warning: SSL certificate verification is disabled!")
-                kwargs['options']['verify'] = False
+                kwargs["options"]["verify"] = False
                 # Disable ssl validation warnings, we gave one warning already ...
                 from urllib3.exceptions import InsecureRequestWarning
                 from requests.packages.urllib3 import disable_warnings
+
                 disable_warnings(category=InsecureRequestWarning)
 
             self._jira = JiraClientOverride(**kwargs)
@@ -279,7 +268,7 @@ class JiraWrapper(object):
     def board_id(self):
         if not self._board_id:
             try:
-                cfgboard = str(self._config['board']).lower()
+                cfgboard = str(self._config["board"]).lower()
             except KeyError:
                 raise KeyError("config has no 'board' defined!")
 
@@ -291,14 +280,14 @@ class JiraWrapper(object):
                     break
 
             if not self._board_id:
-                raise ValueError("Unable to find board '{}'".format(self._config['board']))
+                raise ValueError("Unable to find board '{}'".format(self._config["board"]))
         return self._board_id
 
     @property
     def project_id(self):
         if not self._project_id:
             try:
-                cfgproject = str(self._config['project']).lower()
+                cfgproject = str(self._config["project"]).lower()
             except KeyError:
                 raise KeyError("config has no 'project' defined!")
 
@@ -310,13 +299,13 @@ class JiraWrapper(object):
                     break
 
             if not self._project_id:
-                raise ValueError("Unable to find project '{}'".format(self._config['project']))
+                raise ValueError("Unable to find project '{}'".format(self._config["project"]))
         return self._project_id
 
     @property
     def userid(self):
         if not self._userid:
-            self._userid = self.jira.myself()['key']
+            self._userid = self.jira.myself()["key"]
 
         return self._userid
 
@@ -341,9 +330,9 @@ class JiraWrapper(object):
 
     def get_current_sprint(self):
         active_sprints = (
-            sprint for sprint
-            in self.jira.sprints(board_id=self.board_id, state='active')
-            if sprint.state.lower() == 'active'
+            sprint
+            for sprint in self.jira.sprints(board_id=self.board_id, state="active")
+            if sprint.state.lower() == "active"
         )
         current_sprint = sorted(active_sprints, key=lambda sprint: sprint.id)[-1]
         self._current_sprint_id = str(current_sprint.id)
@@ -381,16 +370,18 @@ class JiraWrapper(object):
             search_query = (
                 "project = {} AND issuetype != Epic AND resolution = Unresolved AND "
                 "status != Done AND "
-                "(Sprint = EMPTY OR Sprint not in (openSprints(), futureSprints()))"
-                .format(self.project_id))
+                "(Sprint = EMPTY OR Sprint not in (openSprints(), futureSprints()))".format(
+                    self.project_id
+                )
+            )
         else:
             sprint = self.current_sprint_id if not sprint else sprint
-            search_query = 'sprint = {} '.format(sprint)
+            search_query = "sprint = {} ".format(sprint)
         if not assignee:
             # Make sure we are still logged in, otherwise an empty list may be returned.
             self.jira.myself()
             assignee = "currentUser()"
-        search_query += ' AND assignee = {}'.format(assignee)
+        search_query += " AND assignee = {}".format(assignee)
         if status:
             search_query += ' AND status in ("{}")'.format(status)
         if text:
@@ -448,7 +439,7 @@ class JiraWrapper(object):
         Find all "Done" issues assigned to me in the current sprint and 0 their time estimate.
         """
         issues = self.jira.search_issues(
-            'sprint = {} AND assignee = currentUser() AND '
+            "sprint = {} AND assignee = currentUser() AND "
             'status = "Done" AND remainingEstimate > 0'.format(self.current_sprint_id)
         )
 
@@ -462,14 +453,13 @@ class JiraWrapper(object):
 
         For example: "In Progress" becomes "inprogress"
         """
-        return txt.replace(' ', '').lower()
+        return txt.replace(" ", "").lower()
 
     @property
     def component_labels_map(self):
         try:
             lowercase_data = {
-                k.lower(): [l.lower() for l in v]
-                for k, v in self._component_labels_map.items()
+                k.lower(): [l.lower() for l in v] for k, v in self._component_labels_map.items()
             }
         except KeyError:
             lowercase_data = {}
@@ -517,7 +507,7 @@ class JiraWrapper(object):
     def update_labels(self, issue, labels):
         f = IssueFields().labels(labels)
 
-        if hasattr(issue, 'components') and len(issue.components) > 0:
+        if hasattr(issue, "components") and len(issue.components) > 0:
             self._check_comp_labels(issue.components[0].name, labels)
 
         issue.update(**f.kwarg)
@@ -549,14 +539,16 @@ class JiraWrapper(object):
         """
         avail_statuses = [
             {
-                'name': JiraWrapper.normalize_name(t['name']),  # used for name matching
-                'id': t['id'],
-                'friendly_name': t['name'],
-            } for t in self.jira.transitions(issue) if 'Parallel Team' not in t['name']
+                "name": JiraWrapper.normalize_name(t["name"]),  # used for name matching
+                "id": t["id"],
+                "friendly_name": t["name"],
+            }
+            for t in self.jira.transitions(issue)
+            if "Parallel Team" not in t["name"]
         ]
-        avail_statuses.sort(key=lambda s: s['name'])
+        avail_statuses.sort(key=lambda s: s["name"])
         for idx, status in enumerate(avail_statuses):
-            status['local_num'] = idx + 1
+            status["local_num"] = idx + 1
         return avail_statuses
 
     @staticmethod
@@ -574,13 +566,22 @@ class JiraWrapper(object):
         """
         for s in avail_statuses:
             normalized_name = JiraWrapper.normalize_name(txt)
-            if normalized_name == s['name'] or (txt.isdigit() and int(txt) == s['local_num']):
-                return s['id']
+            if normalized_name == s["name"] or (txt.isdigit() and int(txt) == s["local_num"]):
+                return s["id"]
         return None
 
-    def create_issue(self, summary, details=None, component=None,
-                     labels=None, assignee=None, sprint=None, timeleft=None,
-                     issuetype='Task', force_labels=False):
+    def create_issue(
+        self,
+        summary,
+        details=None,
+        component=None,
+        labels=None,
+        assignee=None,
+        sprint=None,
+        timeleft=None,
+        issuetype="Task",
+        force_labels=False,
+    ):
         """
         Create an issue (by default, a Story) in the agile sprint.
 
@@ -604,7 +605,7 @@ class JiraWrapper(object):
 
         if not sprint:
             sprint_id = self.current_sprint_id
-        elif sprint != 'backlog':
+        elif sprint != "backlog":
             _, sprint_id = self.find_sprint(sprint)
 
         if not force_labels:
@@ -612,13 +613,9 @@ class JiraWrapper(object):
 
         f = IssueFields()
         comp_name_server_side, _ = self.find_component(component)
-        f.summary(summary) \
-            .description(details) \
-            .component(comp_name_server_side) \
-            .labels(labels) \
-            .project(id=self.project_id) \
-            .issuetype(issuetype) \
-            .timetracking(timeleft, timeleft)
+        f.summary(summary).description(details).component(comp_name_server_side).labels(
+            labels
+        ).project(id=self.project_id).issuetype(issuetype).timetracking(timeleft, timeleft)
 
         new_issue = self.jira.create_issue(**f.kwarg)
 
@@ -637,10 +634,12 @@ class JiraWrapper(object):
         try:
             self.userid
         except JIRAError as e:
-            if 'CAPTCHA_CHALLENGE' in e.text:
+            if "CAPTCHA_CHALLENGE" in e.text:
                 print("Your userID currently requires answering a CAPTCHA to login via basic auth")
-                raw_input("Open {} in a browser, log in there to answer the CAPTCHA\n"
-                          "Hit 'enter' here when done.".format(self.jira_url))
+                input(
+                    "Open {} in a browser, log in there to answer the CAPTCHA\n"
+                    "Hit 'enter' here when done.".format(self.jira_url)
+                )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")  # Hide jira greenhopper API warnings
             print("UserID:", self.userid)

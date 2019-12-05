@@ -1,16 +1,22 @@
 from __future__ import print_function
 
 import copy
-from inspect import isclass, isfunction
+from inspect import isclass
+from inspect import isfunction
 
 import attr
 import yaml
-from attr.validators import optional, instance_of
-from jira.resources import Resource, Issue, Worklog
+from attr.validators import instance_of
+from attr.validators import optional
+from jira.resources import Issue
+from jira.resources import Resource
+from jira.resources import Worklog
 from prettytable import PrettyTable
-
-from .common import iso_to_ctime_str, friendly_worklog_time, iso_to_datetime
 from six import string_types
+
+from .common import friendly_worklog_time
+from .common import iso_to_ctime_str
+from .common import iso_to_datetime
 
 
 @attr.s
@@ -100,15 +106,11 @@ class ResourceCollection(object):
         return valid
 
     """ method which becomes the key for sorting this collection's list of resources """
-    sorter = attr.ib(
-        default=None,
-        validator=optional(lambda _, __, value: isfunction(value)))
+    sorter = attr.ib(default=None, validator=optional(lambda _, __, value: isfunction(value)))
 
     # these should usually not be passed in by the caller and are populated by @properties below
-    _table = attr.ib(default=None,
-                     validator=optional(instance_of(PrettyTable)))
-    _table_with_totals = attr.ib(default=None,
-                                 validator=optional(instance_of(PrettyTable)))
+    _table = attr.ib(default=None, validator=optional(instance_of(PrettyTable)))
+    _table_with_totals = attr.ib(default=None, validator=optional(instance_of(PrettyTable)))
 
     @property
     def table(self):
@@ -178,8 +180,7 @@ class ResourceCollection(object):
         filtered_data_list = []
         for entry in entry_data_list:
             filtered_data = {
-                self.field_names[i]: data
-                for i, data in enumerate(self.row_builder(entry))
+                self.field_names[i]: data for i, data in enumerate(self.row_builder(entry))
             }
             filtered_data_list.append(filtered_data)
         return yaml.safe_dump(filtered_data_list, default_flow_style=False)
@@ -211,7 +212,7 @@ def issue_collection(issue_list):
         """
         Not sure if we'll be using this yet ...
         """
-        '''
+        """
         issue.update(
             key=new_data['key'],
             summary=new_data['summary'],
@@ -224,7 +225,7 @@ def issue_collection(issue_list):
             }
         )
         TODO: transition status
-        '''
+        """
 
     def totals_row_builder(issue_list):
         total_timespent = friendly_worklog_time(
@@ -243,7 +244,7 @@ def issue_collection(issue_list):
         row_builder=row_builder,
         updater=updater,
         totals_row_builder=totals_row_builder,
-        sorter=lambda issue: issue.fields.status.name
+        sorter=lambda issue: issue.fields.status.name,
     )
 
 
@@ -266,5 +267,5 @@ def worklog_collection(worklog_list):
         row_builder=row_builder,
         updater=None,
         totals_row_builder=totals_row_builder,
-        sorter=lambda worklog: iso_to_datetime(worklog.started)
+        sorter=lambda worklog: iso_to_datetime(worklog.started),
     )

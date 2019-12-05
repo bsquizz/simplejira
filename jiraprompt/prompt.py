@@ -9,15 +9,17 @@ import prompter
 import yaml
 from undecorated import undecorated
 
-from .common import (
-    editor_ignore_comments, sanitize_worklog_time, ctime_str_to_datetime
-)
+from .common import ctime_str_to_datetime
+from .common import editor_ignore_comments
+from .common import sanitize_worklog_time
 from .res import get_issue_template
-from .resource_collections import issue_collection, worklog_collection
-from .wrapper import JiraWrapper, InvalidLabelError
+from .resource_collections import issue_collection
+from .resource_collections import worklog_collection
+from .wrapper import InvalidLabelError
+from .wrapper import JiraWrapper
 
 
-def _selector(list_to_select_from, title, default=''):
+def _selector(list_to_select_from, title, default=""):
     if len(list_to_select_from) == 0:
         return prompter.prompt(title, default="")
 
@@ -51,6 +53,7 @@ class BasePrompt(cmd2.Cmd, object):
     """
     Base class that other prompts are built on
     """
+
     @property
     def cmd_shortcuts(self):
         """
@@ -73,14 +76,14 @@ class BasePrompt(cmd2.Cmd, object):
         """
         for shortcut, cmd in self.cmd_shortcuts.items():
             setattr(self, shortcut, getattr(self, cmd))
-            self.hidden_commands.append(shortcut.replace('do_', ''))
+            self.hidden_commands.append(shortcut.replace("do_", ""))
 
     def print_cmds(self):
         """
         Print commands and their shortcuts along with a shortened description.
         """
         for shortcut, full_cmd_name in self.cmd_shortcuts.items():
-            shortcut_name = shortcut.replace('do_', '')
+            shortcut_name = shortcut.replace("do_", "")
 
             # Get the description for this cmd, and 'undecorate' it to get the original docstring
             # without the argparse stuff
@@ -88,7 +91,7 @@ class BasePrompt(cmd2.Cmd, object):
 
             print(
                 "  {:>5} / {:<20} {}".format(
-                    shortcut_name, full_cmd_name.replace('do_', ''), docstring
+                    shortcut_name, full_cmd_name.replace("do_", ""), docstring
                 )
             )
 
@@ -104,8 +107,16 @@ class BasePrompt(cmd2.Cmd, object):
         cmd2.Cmd.__init__(self, use_ipython=False)
         self.allow_cli_args = True
         self.hidden_commands += [
-            'load', 'py', 'pyscript', 'shell', 'set',
-            'shortcuts', 'history', 'edit', 'alias', 'unalias',
+            "load",
+            "py",
+            "pyscript",
+            "shell",
+            "set",
+            "shortcuts",
+            "history",
+            "edit",
+            "alias",
+            "unalias",
         ]
         self.set_shortcuts()
 
@@ -114,21 +125,20 @@ class MainPrompt(BasePrompt):
     @property
     def cmd_shortcuts(self):
         od = collections.OrderedDict()
-        od['do_r'] = 'do_reload'
-        od['do_c'] = 'do_card'
-        od['do_n'] = 'do_new'
-        od['do_q'] = 'do_quit'
-        od['do_l'] = 'do_ls'
-        od['do_tw'] = 'do_todayswork'
-        od['do_yw'] = 'do_yesterdayswork'
+        od["do_r"] = "do_reload"
+        od["do_c"] = "do_card"
+        od["do_n"] = "do_new"
+        od["do_q"] = "do_quit"
+        od["do_l"] = "do_ls"
+        od["do_tw"] = "do_todayswork"
+        od["do_yw"] = "do_yesterdayswork"
         return od
 
     def _init_jira(self):
         """
         Instantiates JiraWrapper and initializes it (loads properties)
         """
-        self._jw = JiraWrapper(
-            config_file=self.config_file, labels_file=self.labels_file)
+        self._jw = JiraWrapper(config_file=self.config_file, labels_file=self.labels_file)
         self._jw.init()
         self._jira = self._jw.jira
 
@@ -151,12 +161,14 @@ class MainPrompt(BasePrompt):
         """
         Decorator which ensures an issue table has been generated before executing 'func'
         """
+
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             if not self.issue_collection:
                 print("No issue table generated yet. Run 'ls' or 'search' first")
             else:
                 func(self, *args, **kwargs)
+
         return wrapper
 
     # -----------------
@@ -171,17 +183,29 @@ class MainPrompt(BasePrompt):
     # -----------------
     ls_parser = argparse.ArgumentParser()
     ls_parser.add_argument(
-        '-u', '--user', type=str, default=None,
-        help='Issue assignee. Default is yourself.')
+        "-u", "--user", type=str, default=None, help="Issue assignee. Default is yourself."
+    )
     ls_parser.add_argument(
-        '-s', '--sprint', type=str, default=None,
-        help='Sprint name, sprint number, or "backlog". Default is current sprint.')
+        "-s",
+        "--sprint",
+        type=str,
+        default=None,
+        help='Sprint name, sprint number, or "backlog". Default is current sprint.',
+    )
     ls_parser.add_argument(
-        '-S', '--status', type=str, default=None,
-        help='Status of the card. e.g. "inprogress" or "In Progress"')
+        "-S",
+        "--status",
+        type=str,
+        default=None,
+        help='Status of the card. e.g. "inprogress" or "In Progress"',
+    )
     ls_parser.add_argument(
-        '-t', '--text', type=str, default=None,
-        help='Search by text in title or description of the card e.g. --text "5.8 BZs"')
+        "-t",
+        "--text",
+        type=str,
+        default=None,
+        help='Search by text in title or description of the card e.g. --text "5.8 BZs"',
+    )
 
     @cmd2.with_argparser(ls_parser)
     def do_ls(self, args):
@@ -202,9 +226,10 @@ class MainPrompt(BasePrompt):
     # card
     # -----------------
     card_parser = argparse.ArgumentParser()
-    card_parser.add_argument('number', type=int, help="Card # from table to operate on")
-    card_parser.add_argument('cmd', nargs=argparse.REMAINDER,
-                             help="Command to pass on to card prompt (optional)")
+    card_parser.add_argument("number", type=int, help="Card # from table to operate on")
+    card_parser.add_argument(
+        "cmd", nargs=argparse.REMAINDER, help="Command to pass on to card prompt (optional)"
+    )
 
     @cmd2.with_argparser(card_parser)
     @requires_table
@@ -220,20 +245,37 @@ class MainPrompt(BasePrompt):
     # new
     # -----------------
     create_parser = argparse.ArgumentParser()
-    create_parser.add_argument('-e', '--editor', default=False, action="store_true",
-                               help="Open a text editor to fill out issue parameters")
-    create_parser.add_argument('-s', '--summary', type=str, default=None, help='Issue summary')
-    create_parser.add_argument('-d', '--details', type=str, default=None, help='Issue details')
-    create_parser.add_argument('-c', '--component', type=str, default=None, help='Component')
-    create_parser.add_argument('-l', '--label', type=str, default=None, help='Label')
-    create_parser.add_argument('-a', '--assignee', type=str, default=None,
-                               help='Assignee\'s user ID. Default=yourself')
-    create_parser.add_argument('-S', '--sprint', type=str, default=None,
-                               help='Sprint name, sprint number, or "blacklog". Default=current')
-    create_parser.add_argument('-T', '--timeleft', type=str, default=None,
-                               help='Estimated time remaining, e.g. "5h30m"')
-    create_parser.add_argument('-t', '--issue-type', type=str, default='Task',
-                               help='Issue type, one of Task, Story, Bug, Epic. Default=Task')
+    create_parser.add_argument(
+        "-e",
+        "--editor",
+        default=False,
+        action="store_true",
+        help="Open a text editor to fill out issue parameters",
+    )
+    create_parser.add_argument("-s", "--summary", type=str, default=None, help="Issue summary")
+    create_parser.add_argument("-d", "--details", type=str, default=None, help="Issue details")
+    create_parser.add_argument("-c", "--component", type=str, default=None, help="Component")
+    create_parser.add_argument("-l", "--label", type=str, default=None, help="Label")
+    create_parser.add_argument(
+        "-a", "--assignee", type=str, default=None, help="Assignee's user ID. Default=yourself"
+    )
+    create_parser.add_argument(
+        "-S",
+        "--sprint",
+        type=str,
+        default=None,
+        help='Sprint name, sprint number, or "blacklog". Default=current',
+    )
+    create_parser.add_argument(
+        "-T", "--timeleft", type=str, default=None, help='Estimated time remaining, e.g. "5h30m"'
+    )
+    create_parser.add_argument(
+        "-t",
+        "--issue-type",
+        type=str,
+        default="Task",
+        help="Issue type, one of Task, Story, Bug, Epic. Default=Task",
+    )
 
     @cmd2.with_argparser(create_parser)
     def do_new(self, args):
@@ -242,37 +284,41 @@ class MainPrompt(BasePrompt):
         myid = self._jw.userid
 
         if args.editor:
-            kwargs = yaml.safe_load(
-                editor_ignore_comments(get_issue_template())
-            )
+            kwargs = yaml.safe_load(editor_ignore_comments(get_issue_template()))
 
             # Convert 'label' kwarg to 'labels' for JiraWrapper.create_issue()
-            kwargs['labels'] = [kwargs['label']]
-            del kwargs['label']
-            if not kwargs['sprint']:
-                kwargs['sprint'] = curr_sprint_name
-            if not kwargs['assignee']:
-                kwargs['assignee'] = myid
-            if not kwargs['issuetype']:
-                kwargs['issuetype'] = 'Task'
+            kwargs["labels"] = [kwargs["label"]]
+            del kwargs["label"]
+            if not kwargs["sprint"]:
+                kwargs["sprint"] = curr_sprint_name
+            if not kwargs["assignee"]:
+                kwargs["assignee"] = myid
+            if not kwargs["issuetype"]:
+                kwargs["issuetype"] = "Task"
         else:
             curr_sprint_name = self._jw.current_sprint_name
             print("Enter issue details below. Hit Ctrl+C to cancel and return to prompt.")
             kwargs = {}
-            kwargs['summary'] = self.input("Summary/title:")
-            kwargs['details'] = self.input("Details:", default="")
+            kwargs["summary"] = self.input("Summary/title:")
+            kwargs["details"] = self.input("Details:", default="")
             c_l_map = self._jw.component_labels_map
-            kwargs['component'] = _selector(
-                c_l_map.keys() if len(c_l_map) > 0 else [], "Enter component")
-            kwargs['labels'] = [_selector(
-                c_l_map[kwargs['component']] if kwargs['component'] in c_l_map else [],
-                "Enter label")]
-            kwargs['assignee'] = self.input("Assignee:", default=myid)
-            kwargs['sprint'] = self.input("Sprint name, id, or 'backlog':",
-                                          default=curr_sprint_name)
-            kwargs['timeleft'] = self.input("Time left (e.g. 2h30m)", default="")
-            kwargs['issuetype'] = _selector(['Task', 'Story', 'Bug', 'Epic'], 'Enter issue type',
-                                            default='Task')
+            kwargs["component"] = _selector(
+                c_l_map.keys() if len(c_l_map) > 0 else [], "Enter component"
+            )
+            kwargs["labels"] = [
+                _selector(
+                    c_l_map[kwargs["component"]] if kwargs["component"] in c_l_map else [],
+                    "Enter label",
+                )
+            ]
+            kwargs["assignee"] = self.input("Assignee:", default=myid)
+            kwargs["sprint"] = self.input(
+                "Sprint name, id, or 'backlog':", default=curr_sprint_name
+            )
+            kwargs["timeleft"] = self.input("Time left (e.g. 2h30m)", default="")
+            kwargs["issuetype"] = _selector(
+                ["Task", "Story", "Bug", "Epic"], "Enter issue type", default="Task"
+            )
 
         try:
             self._jw.create_issue(**kwargs)
@@ -280,10 +326,12 @@ class MainPrompt(BasePrompt):
             print(str(e))
             confirm = prompter.yesno("Use these labels anyway?")
             if not confirm:
-                del kwargs['labels']
-                print("Removed labels from the issue, please use 'addlabels' later to add proper "
-                      "labels")
-            kwargs['force_labels'] = True
+                del kwargs["labels"]
+                print(
+                    "Removed labels from the issue, please use 'addlabels' later to add proper "
+                    "labels"
+                )
+            kwargs["force_labels"] = True
             self._jw.create_issue(**kwargs)
 
     # -----------------
@@ -293,7 +341,8 @@ class MainPrompt(BasePrompt):
     def do_todayswork(self, args):
         """show all work log entries logged today for a generated issue table"""
         worklog_collection(
-            self._jw.get_todays_worklogs(self.issue_collection.entries)).print_table()
+            self._jw.get_todays_worklogs(self.issue_collection.entries)
+        ).print_table()
 
     # -----------------
     # yesterdayswork
@@ -302,31 +351,33 @@ class MainPrompt(BasePrompt):
     def do_yesterdayswork(self, args):
         """show all work log entries logged yesterday for a generated issue table"""
         worklog_collection(
-            self._jw.get_yesterdays_worklogs(self.issue_collection.entries)).print_table()
+            self._jw.get_yesterdays_worklogs(self.issue_collection.entries)
+        ).print_table()
 
 
 class CardPrompt(BasePrompt):
     """
     Prompt used for performing actions against a single card.
     """
+
     @property
     def cmd_shortcuts(self):
         od = collections.OrderedDict()
-        od['do_l'] = 'do_ls'
-        od['do_log'] = 'do_logwork'
-        od['do_lsw'] = 'do_lswork'
-        od['do_e'] = 'do_editwork'
-        od['do_t'] = 'do_timeleft'
-        od['do_c'] = 'do_component'
-        od['do_al'] = 'do_addlabels'
-        od['do_rl'] = 'do_rmlabels'
-        od['do_s'] = 'do_status'
-        od['do_d'] = 'do_done'
-        od['do_b'] = 'do_backlog'
-        od['do_p'] = 'do_pull'
-        od['do_r'] = 'do_remove'
-        od['do_a'] = 'do_assign'
-        od['do_q'] = 'do_quit'
+        od["do_l"] = "do_ls"
+        od["do_log"] = "do_logwork"
+        od["do_lsw"] = "do_lswork"
+        od["do_e"] = "do_editwork"
+        od["do_t"] = "do_timeleft"
+        od["do_c"] = "do_component"
+        od["do_al"] = "do_addlabels"
+        od["do_rl"] = "do_rmlabels"
+        od["do_s"] = "do_status"
+        od["do_d"] = "do_done"
+        od["do_b"] = "do_backlog"
+        od["do_p"] = "do_pull"
+        od["do_r"] = "do_remove"
+        od["do_a"] = "do_assign"
+        od["do_q"] = "do_quit"
         return od
 
     def __init__(self, jira_wrapper, issue):
@@ -345,10 +396,7 @@ class CardPrompt(BasePrompt):
         """
         Override to print cmds when prompt starts
         """
-        print(
-            "\nIn card prompt for '{}'; commands you can use here:\n".format(
-                self.issue.key)
-        )
+        print("\nIn card prompt for '{}'; commands you can use here:\n".format(self.issue.key))
 
         self.print_cmds()
 
@@ -361,15 +409,15 @@ class CardPrompt(BasePrompt):
 
     def do_done(self, args):
         """shortcut to change card's timeleft to '0' and status to 'done'."""
-        self.do_timeleft('0')
-        return self.do_status('done')
+        self.do_timeleft("0")
+        return self.do_status("done")
 
     # -----------------
     # logwork
     # -----------------
     log_parser = argparse.ArgumentParser()
-    log_parser.add_argument('timespent', const=None, nargs='?', help="Time spent, e.g. 2h30m")
-    log_parser.add_argument('comment', const=None, nargs='*', help="Comment for the work done")
+    log_parser.add_argument("timespent", const=None, nargs="?", help="Time spent, e.g. 2h30m")
+    log_parser.add_argument("comment", const=None, nargs="*", help="Comment for the work done")
 
     @cmd2.with_argparser(log_parser)
     def do_logwork(self, args):
@@ -382,9 +430,7 @@ class CardPrompt(BasePrompt):
             args.comment = " ".join(args.comment)
 
         self._jira.add_worklog(
-            self.issue.key,
-            timeSpent=sanitize_worklog_time(args.timespent),
-            comment=args.comment
+            self.issue.key, timeSpent=sanitize_worklog_time(args.timespent), comment=args.comment
         )
 
     def _reload_issue(self):
@@ -411,8 +457,13 @@ class CardPrompt(BasePrompt):
     # status
     # -----------------
     status_parser = argparse.ArgumentParser()
-    status_parser.add_argument('new_status', const=None, type=str, nargs='*',
-                               help="Name of new status (e.g. in progress or inprogress)")
+    status_parser.add_argument(
+        "new_status",
+        const=None,
+        type=str,
+        nargs="*",
+        help="Name of new status (e.g. in progress or inprogress)",
+    )
 
     @cmd2.with_argparser(status_parser)
     def do_status(self, args):
@@ -428,11 +479,10 @@ class CardPrompt(BasePrompt):
 
             print("Available statuses:\n\n")
             for status in avail_statuses:
-                print("  {}) {}".format(status['local_num'], status['friendly_name']))
+                print("  {}) {}".format(status["local_num"], status["friendly_name"]))
             while True:
                 new_id = self._jw.get_avail_status_id(
-                    avail_statuses,
-                    self.input("Select new status (enter number from above):")
+                    avail_statuses, self.input("Select new status (enter number from above):")
                 )
                 if new_id:
                     break
@@ -443,7 +493,7 @@ class CardPrompt(BasePrompt):
     # component
     # -----------------
     component_parser = argparse.ArgumentParser()
-    component_parser.add_argument('component_name', const=None, type=str, nargs='?')
+    component_parser.add_argument("component_name", const=None, type=str, nargs="?")
 
     @cmd2.with_argparser(component_parser)
     def do_component(self, args):
@@ -457,7 +507,7 @@ class CardPrompt(BasePrompt):
     # addlabels
     # -----------------
     label_parser = argparse.ArgumentParser()
-    label_parser.add_argument('label_names', const=None, type=str, nargs='*')
+    label_parser.add_argument("label_names", const=None, type=str, nargs="*")
 
     @cmd2.with_argparser(label_parser)
     def do_addlabels(self, args):
@@ -467,10 +517,10 @@ class CardPrompt(BasePrompt):
             issue_component = self._jw.get_component(self.issue).lower()
             if issue_component:
                 args.label_names = _selector(
-                    c_l_map[issue_component] if issue_component in c_l_map else [],
-                    "Select label").split(' ')
+                    c_l_map[issue_component] if issue_component in c_l_map else [], "Select label"
+                ).split(" ")
             else:
-                args.label_names = self.input("Enter label(s):").split(' ')
+                args.label_names = self.input("Enter label(s):").split(" ")
         current_labels = self.issue.fields.labels
         # use set to de-dupe but convert back to list for json serialization
         updated_labels = list(set(current_labels + args.label_names))
@@ -492,7 +542,7 @@ class CardPrompt(BasePrompt):
     def do_rmlabels(self, args):
         """remove label(s)"""
         if not args.label_names:
-            args.label_names = self.input("Enter label names (separated by space):").split(' ')
+            args.label_names = self.input("Enter label names (separated by space):").split(" ")
         new_labels = [l for l in self.issue.fields.labels if l not in args.label_names]
         self._jw.update_labels(self.issue, new_labels)
 
@@ -516,8 +566,9 @@ class CardPrompt(BasePrompt):
     # timeleft
     # -----------------
     timeleft_parser = argparse.ArgumentParser()
-    timeleft_parser.add_argument('time_string', const=None, type=str, nargs='*',
-                                 help="Estimated time remaining (e.g. 2h30m)")
+    timeleft_parser.add_argument(
+        "time_string", const=None, type=str, nargs="*", help="Estimated time remaining (e.g. 2h30m)"
+    )
 
     @cmd2.with_argparser(timeleft_parser)
     def do_timeleft(self, args):
@@ -578,9 +629,9 @@ class CardPrompt(BasePrompt):
             for wl in new_worklogs:
                 self._jira.add_worklog(
                     self.issue.key,
-                    timeSpent=sanitize_worklog_time(wl['timeSpent']),
-                    comment=wl['comment'],
-                    started=ctime_str_to_datetime(wl['started']),
+                    timeSpent=sanitize_worklog_time(wl["timeSpent"]),
+                    comment=wl["comment"],
+                    started=ctime_str_to_datetime(wl["started"]),
                 )
         # done
 
@@ -588,9 +639,13 @@ class CardPrompt(BasePrompt):
     # assign
     # --------------------
     assignee_parser = argparse.ArgumentParser()
-    assignee_parser.add_argument('assignee', default=None, type=str, nargs='?',
-                                 help="username to assign card to, "
-                                 "case insensitive")
+    assignee_parser.add_argument(
+        "assignee",
+        default=None,
+        type=str,
+        nargs="?",
+        help="username to assign card to, " "case insensitive",
+    )
 
     @cmd2.with_argparser(assignee_parser)
     def do_assign(self, args):
@@ -600,7 +655,8 @@ class CardPrompt(BasePrompt):
         continue_assignment = False
         if not args.assignee:
             continue_assignment = prompter.yesno(
-                "Leaving assignee blank would unassign the card. Continue?")
+                "Leaving assignee blank would unassign the card. Continue?"
+            )
         if continue_assignment or args.assignee:
             self._jira.assign_issue(self.issue, args.assignee)
         else:

@@ -1,9 +1,11 @@
 import re
-from datetime import datetime, timedelta
+from datetime import datetime
+from datetime import timedelta
 
 import editor
 import iso8601
-from dateutil import tz, parser
+from dateutil import parser
+from dateutil import tz
 
 
 def editor_preserve_comments(default_text):
@@ -30,7 +32,7 @@ def editor_ignore_comments(default_text):
     edited_text = editor.edit(contents=default_text)
     if not isinstance(edited_text, str):
         edited_text = edited_text.decode("utf-8")
-    lines = edited_text.split('\n')
+    lines = edited_text.split("\n")
     return "\n".join(line for line in lines if not line.lstrip().startswith("#"))
 
 
@@ -39,21 +41,21 @@ def sanitize_worklog_time(s):
     Convert a time string entered by user
     to jira-acceptable format for issue time tracking
     """
-    s = s.replace(' ', '')
+    s = s.replace(" ", "")
 
     def get_number_before(letter):
         number = 0
         try:
-            regex_str = r'\D*(\d*)\s*{}.*'.format(letter)
+            regex_str = r"\D*(\d*)\s*{}.*".format(letter)
             number = re.findall(regex_str, s)[0]
         except (AttributeError, IndexError):
             pass
         return number
 
-    days = get_number_before('d')
-    hours = get_number_before('h')
-    mins = get_number_before('m')
-    secs = get_number_before('s')
+    days = get_number_before("d")
+    hours = get_number_before("h")
+    mins = get_number_before("m")
+    secs = get_number_before("s")
 
     new_s = ""
     new_s += days + "d " if days else ""
@@ -98,7 +100,7 @@ def iso_to_datetime(string):
 # Using a time format that explicitly specifies %Z since in some
 # environments the time zone was not being printed even
 # if the datetime object had 'tzinfo'
-TIME_FORMAT = '%a %x %X %Z'
+TIME_FORMAT = "%a %x %X %Z"
 
 
 def iso_to_ctime_str(string):
