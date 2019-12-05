@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import copy
 from inspect import isclass
 from inspect import isfunction
@@ -12,7 +10,6 @@ from jira.resources import Issue
 from jira.resources import Resource
 from jira.resources import Worklog
 from prettytable import PrettyTable
-from six import string_types
 
 from .common import friendly_worklog_time
 from .common import iso_to_ctime_str
@@ -20,7 +17,7 @@ from .common import iso_to_datetime
 
 
 @attr.s
-class ResourceCollection(object):
+class ResourceCollection:
     """
     Represents an ordered set of Jira Resource entries (issues, worklogs, etc.)
 
@@ -56,7 +53,7 @@ class ResourceCollection(object):
     @field_names.validator
     def validate_field_names(self, __, value):
         for v in value:
-            if not isinstance(v, string_types):
+            if not isinstance(v, str):
                 raise ValueError(v)
 
     """ defines the fields that should be 'aligned left' when table is printed """

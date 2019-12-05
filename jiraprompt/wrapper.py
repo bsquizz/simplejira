@@ -15,12 +15,12 @@ from .common import sanitize_worklog_time
 
 class InvalidLabelError(Exception):
     def __init__(self, component, label, *args, **kwargs):
-        super(InvalidLabelError, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.component = component
         self.label = label
 
     def __str__(self):
-        return "Label '{}' is not valid for component '{}'".format(self.label, self.component)
+        return f"Label '{self.label}' is not valid for component '{self.component}'"
 
 
 class ResilientSessionWithAuthCheck(ResilientSession):
@@ -72,9 +72,7 @@ class ResilientSessionWithAuthCheck(ResilientSession):
         if hasattr(response, "status_code") and response.status_code == 401:
             print("Session expired, attempting to refresh...")
             self.get_new_cookies()
-        return super(ResilientSessionWithAuthCheck, self)._ResilientSession__recoverable(
-            response, *args, **kwargs
-        )
+        return super()._ResilientSession__recoverable(response, *args, **kwargs)
 
 
 class JiraClientOverride(JIRA):
@@ -82,7 +80,7 @@ class JiraClientOverride(JIRA):
         """
         Overrides the client session with our own version of ResilientSession.
         """
-        super(JiraClientOverride, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self._session = ResilientSessionWithAuthCheck(self._session, args, kwargs)
 
     def _create_kerberos_session(self, *args, **kwargs):
@@ -93,14 +91,14 @@ class JiraClientOverride(JIRA):
 
         https://stackoverflow.com/questions/21578699/jira-rest-api-and-kerberos-authentication
         """
-        super(JiraClientOverride, self)._create_kerberos_session(*args, **kwargs)
+        super()._create_kerberos_session(*args, **kwargs)
         print("Attempting to authenticate with kerberos...")
         r = self._session.get("{}/step-auth-gss".format(self._options["server"]))
         if r.status_code == 200:
             print("Authenticated successfully")
 
 
-class IssueFields(object):
+class IssueFields:
     """
     Class which holds builders for various jira field data
 
@@ -177,7 +175,7 @@ class IssueFields(object):
 
 
 @attr.s
-class JiraWrapper(object):
+class JiraWrapper:
     """
     Provides utils for storing config and interacting with python-jira
     """
@@ -376,16 +374,16 @@ class JiraWrapper(object):
             )
         else:
             sprint = self.current_sprint_id if not sprint else sprint
-            search_query = "sprint = {} ".format(sprint)
+            search_query = f"sprint = {sprint} "
         if not assignee:
             # Make sure we are still logged in, otherwise an empty list may be returned.
             self.jira.myself()
             assignee = "currentUser()"
-        search_query += " AND assignee = {}".format(assignee)
+        search_query += f" AND assignee = {assignee}"
         if status:
-            search_query += ' AND status in ("{}")'.format(status)
+            search_query += f' AND status in ("{status}")'
         if text:
-            search_query += ' AND (summary ~ "{}" OR description ~ "{}")'.format(text, text)
+            search_query += f' AND (summary ~ "{text}" OR description ~ "{text}")'
         return self.jira.search_issues(search_query)
 
     def get_my_issues(self):

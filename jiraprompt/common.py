@@ -46,7 +46,7 @@ def sanitize_worklog_time(s):
     def get_number_before(letter):
         number = 0
         try:
-            regex_str = r"\D*(\d*)\s*{}.*".format(letter)
+            regex_str = fr"\D*(\d*)\s*{letter}.*"
             number = re.findall(regex_str, s)[0]
         except (AttributeError, IndexError):
             pass
@@ -83,9 +83,9 @@ def friendly_worklog_time(seconds):
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
         string = ""
-        string += "{}h".format(h) if h else ""
-        string += "{}m".format(m) if m else ""
-        string += "{}s".format(s) if s else ""
+        string += f"{h}h" if h else ""
+        string += f"{m}m" if m else ""
+        string += f"{s}s" if s else ""
     return string
 
 

@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import argparse
 import os
 import sys
@@ -45,8 +43,8 @@ def _create_config_files():
     new_labels_config = editor_preserve_comments(get_default_labels())
     labels_path = _write_config_file(DEFAULT_LABELS_FILE, new_labels_config)
 
-    print("Writing config to {}".format(config_path))
-    print("Writing labels config to {}".format(labels_path))
+    print(f"Writing config to {config_path}")
+    print(f"Writing labels config to {labels_path}")
 
 
 def main():
@@ -73,7 +71,7 @@ def main():
     else:
         labels_path = _get_config_path().joinpath(DEFAULT_LABELS_FILE)
     if not labels_path.exists():
-        print("WARNING: Labels config file not found at '{}'".format(labels_path))
+        print(f"WARNING: Labels config file not found at '{labels_path}'")
         labels_path = ""
 
     # print welcome msg

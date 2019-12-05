@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import argparse
 import collections
 from functools import wraps
@@ -49,7 +47,7 @@ def _selector(list_to_select_from, title, default=""):
     return input
 
 
-class BasePrompt(cmd2.Cmd, object):
+class BasePrompt(cmd2.Cmd):
     """
     Base class that other prompts are built on
     """
@@ -143,7 +141,7 @@ class MainPrompt(BasePrompt):
         self._jira = self._jw.jira
 
     def __init__(self, config_file, labels_file):
-        super(MainPrompt, self).__init__()
+        super().__init__()
         self.prompt = "(jiraprompt) "
 
         self.config_file = config_file
@@ -381,8 +379,8 @@ class CardPrompt(BasePrompt):
         return od
 
     def __init__(self, jira_wrapper, issue):
-        super(CardPrompt, self).__init__()
-        self.prompt = "(card {}) ".format(issue.key)
+        super().__init__()
+        self.prompt = f"(card {issue.key}) "
 
         self._jw = jira_wrapper
         self._jira = self._jw.jira
@@ -396,7 +394,7 @@ class CardPrompt(BasePrompt):
         """
         Override to print cmds when prompt starts
         """
-        print("\nIn card prompt for '{}'; commands you can use here:\n".format(self.issue.key))
+        print(f"\nIn card prompt for '{self.issue.key}'; commands you can use here:\n")
 
         self.print_cmds()
 
@@ -475,7 +473,7 @@ class CardPrompt(BasePrompt):
         new_id = self._jw.get_avail_status_id(avail_statuses, args.new_status)
         if not new_id:
             if args.new_status:
-                print('"{}" is an invalid status for this issue.'.format(args.new_status))
+                print(f'"{args.new_status}" is an invalid status for this issue.')
 
             print("Available statuses:\n\n")
             for status in avail_statuses:

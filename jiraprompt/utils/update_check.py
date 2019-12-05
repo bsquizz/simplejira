@@ -2,8 +2,6 @@
 Contains utils such as update checker
 
 """
-from __future__ import print_function
-
 from distutils.version import StrictVersion
 
 import pkg_resources
@@ -23,7 +21,7 @@ def _compare_version(pypi_version):
     try:
         my_version = StrictVersion(local_version)
     except ValueError:
-        print("Version '{}' seems to be a dev version, assuming up-to-date".format(local_version))
+        print(f"Version '{local_version}' seems to be a dev version, assuming up-to-date")
         my_version = StrictVersion("999.999.999")
 
     if my_version < pypi_version:
