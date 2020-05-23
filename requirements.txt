@@ -15,4 +15,5 @@ setuptools_scm>=1.15.7
 undecorated>=0.3.0
 pathlib2>=2.3.0
 wcwidth>=0.1.7
+cached_property
 -e .

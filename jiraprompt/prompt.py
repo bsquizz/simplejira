@@ -7,13 +7,13 @@ import prompter
 import yaml
 from undecorated import undecorated
 
+from .client import JiraClient
 from .common import ctime_str_to_datetime
 from .common import editor_ignore_comments
 from .common import sanitize_worklog_time
 from .res import get_issue_template
 from .resource_collections import issue_collection
 from .resource_collections import worklog_collection
-from .wrapper import InvalidLabelError
 from .wrapper import JiraWrapper
 
 
@@ -102,7 +102,7 @@ class BasePrompt(cmd2.Cmd):
         return prompter.prompt(*args, **kwargs)
 
     def __init__(self):
-        cmd2.Cmd.__init__(self, use_ipython=False)
+        cmd2.Cmd.__init__(self, use_ipython=True)
         self.allow_cli_args = True
         self.hidden_commands += [
             "load",
@@ -136,16 +136,16 @@ class MainPrompt(BasePrompt):
         """
         Instantiates JiraWrapper and initializes it (loads properties)
         """
-        self._jw = JiraWrapper(config_file=self.config_file, labels_file=self.labels_file)
+        self._client = JiraClient(self.config)
+        self._client.connect()
+        self._jw = JiraWrapper(self.config, self._client)
         self._jw.init()
-        self._jira = self._jw.jira
 
-    def __init__(self, config_file, labels_file):
+    def __init__(self, config):
         super().__init__()
         self.prompt = "(jiraprompt) "
 
-        self.config_file = config_file
-        self.labels_file = labels_file
+        self.config = config
         self.issue_collection = None
 
         self._init_jira()
@@ -541,7 +541,7 @@ class CardPrompt(BasePrompt):
         """remove label(s)"""
         if not args.label_names:
             args.label_names = self.input("Enter label names (separated by space):").split(" ")
-        new_labels = [l for l in self.issue.fields.labels if l not in args.label_names]
+        new_labels = [label for label in self.issue.fields.labels if label not in args.label_names]
         self._jw.update_labels(self.issue, new_labels)
 
     # -----------------

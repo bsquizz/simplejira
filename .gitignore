@@ -3,6 +3,9 @@
 .ropeproject
 *.egg-info
 src
-
+build
+dist
+.venv
+.vscode
 .eggs
 venv

@@ -28,6 +28,7 @@ setup(
         "requests-kerberos",
         "undecorated",
         "wcwidth",
+        "cached_property",
     ],
     classifiers=[
         "Topic :: Utilities",

@@ -1,101 +1,13 @@
-import getpass
 import warnings
 
 import attr
-import yaml
-from jira import JIRA
-from jira.exceptions import JIRAError
-from jira.resilientsession import ResilientSession
+from cached_property import cached_property
 
+from .client import JiraClient
 from .common import friendly_worklog_time
 from .common import iso_time_is_today
 from .common import iso_time_is_yesterday
 from .common import sanitize_worklog_time
-
-
-class InvalidLabelError(Exception):
-    def __init__(self, component, label, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.component = component
-        self.label = label
-
-    def __str__(self):
-        return f"Label '{self.label}' is not valid for component '{self.component}'"
-
-
-class ResilientSessionWithAuthCheck(ResilientSession):
-    """
-    Extends the python-jira ResilientSession to reset our session's cookies when auth epxires.
-    """
-
-    def __init__(self, resilient_session_obj, jira_client_args, jira_client_kwargs):
-        """
-        Constructor.
-
-        Copy our attrs to be equivalent to the ResilientSession that was already
-        created. We'll end up with an identical instance of ResilientSession, but the
-        __recoverable() method defined below will be overriden.
-
-        We store the args/kwargs that were used to instantiate the JIRA client so that we can
-        create a new client instance with the same properties in the get_new_cookies() method.
-        """
-        self.__dict__ = resilient_session_obj.__dict__.copy()
-        self._jira_client_args = jira_client_args
-        self._jira_client_kwargs = jira_client_kwargs
-
-    def get_new_cookies(self):
-        """
-        Re-init a JIRA client and grab new cookies from it.
-
-        Uses the same args/kwargs as the original JIRA client that this session was created from
-
-        There is a lot of logic in the JIRA class __init__ method to handle creating the
-        authenticated session, so it's easier to just init a new instance and pull the cookies
-        from the new object into our current session.
-        """
-        new_client = JiraClientOverride(*self._jira_client_args, **self._jira_client_kwargs)
-        # Make an API request to trigger an auth attempt in the new client
-        new_client.myself()
-        self.cookies = new_client._session.cookies  # noqa
-
-    def _ResilientSession__recoverable(self, response, *args, **kwargs):
-        """
-        Override the ResilientSession __recoverable() method.
-
-        Override the retry logic to get new cookies if a 401 is hit.
-
-        The python-jira ResilientSession retries the http request when a 401 is hit, but does
-        not try to refresh the auth session.
-
-        Yeah, overriding a name mangled method is ugly. Perhaps I'll push this upstream soon :)
-        """
-        if hasattr(response, "status_code") and response.status_code == 401:
-            print("Session expired, attempting to refresh...")
-            self.get_new_cookies()
-        return super()._ResilientSession__recoverable(response, *args, **kwargs)
-
-
-class JiraClientOverride(JIRA):
-    def __init__(self, *args, **kwargs):
-        """
-        Overrides the client session with our own version of ResilientSession.
-        """
-        super().__init__(*args, **kwargs)
-        self._session = ResilientSessionWithAuthCheck(self._session, args, kwargs)
-
-    def _create_kerberos_session(self, *args, **kwargs):
-        """
-        Little hack to get auth cookies from JIRA when using kerberos, otherwise
-        queries to other URLs hit a 401 and are not handled properly for some
-        reason
-
-        https://stackoverflow.com/questions/21578699/jira-rest-api-and-kerberos-authentication
-        """
-        super()._create_kerberos_session(*args, **kwargs)
-        print("Attempting to authenticate with kerberos...")
-        r = self._session.get("{}/step-auth-gss".format(self._options["server"]))
-        if r.status_code == 200:
-            print("Authenticated successfully")
 
 
 class IssueFields:
@@ -180,132 +92,13 @@ class JiraWrapper:
     Provides utils for storing config and interacting with python-jira
     """
 
-    config_file = attr.ib()
-    labels_file = attr.ib()
+    config = attr.ib()
+    client = attr.ib(type=JiraClient)
 
-    _config = attr.ib(default=attr.Factory(dict))
-    _component_labels_map = attr.ib(default=attr.Factory(dict))
-    _jira = attr.ib(default=None)
-    _current_sprint_id = attr.ib(default=0)
-    _current_sprint_name = attr.ib(type=str, default=None)
-    _board_id = attr.ib(default=0)
-    _project_id = attr.ib(default=0)
-    _userid = attr.ib(type=str, default=None)
-
-    def __attrs_post_init__(self):
-        """
-        After object instantiation, load config files
-        """
-        with open(self.config_file, "r") as f:
-            self._config = yaml.safe_load(f)
-        if self.labels_file:
-            with open(self.labels_file, "r") as f:
-                self._component_labels_map = yaml.safe_load(f)
-
-    @property
-    def jira_url(self):
-        """
-        Server URL being used for JIRA.
-        """
-        return self._config["url"]
-
-    @property
-    def label_check(self):
-        try:
-            return self._config["label_check"]
-        except KeyError:
-            return False
-
-    @property
-    def verify_ssl(self):
-        try:
-            return self._config["verify_ssl"]
-        except KeyError:
-            return True
-
-    @property
-    def jira(self):
-        """
-        Creates the JiraClient session
-        """
-        if not self._jira:
-            print("Connecting to jira at", self.jira_url)
-            kwargs = {}
-            cfg = self._config
-            auth_cfg = cfg["auth"]
-            kwargs["validate"] = False
-
-            if "basic_auth" in auth_cfg and auth_cfg["basic_auth"] is True:
-                print("Using basic authentication")
-                if "password" in auth_cfg and auth_cfg["password"]:
-                    password = auth_cfg["password"]
-                else:
-                    password = getpass.getpass("Enter your JIRA password: ")
-                kwargs["basic_auth"] = (auth_cfg["username"], password)
-            else:
-                print("Using kerberos authentication")
-                kwargs["kerberos"] = True
-                kwargs["kerberos_options"] = {"mutual_authentication": "DISABLED"}
-
-            kwargs["options"] = {"server": self.jira_url}
-            if "ca_cert_path" in self._config:
-                kwargs["options"]["verify"] = self._config["ca_cert_path"]
-            if self.verify_ssl is False:
-                print("Warning: SSL certificate verification is disabled!")
-                kwargs["options"]["verify"] = False
-                # Disable ssl validation warnings, we gave one warning already ...
-                from urllib3.exceptions import InsecureRequestWarning
-                from requests.packages.urllib3 import disable_warnings
-
-                disable_warnings(category=InsecureRequestWarning)
-
-            self._jira = JiraClientOverride(**kwargs)
-        return self._jira
-
-    @property
-    def board_id(self):
-        if not self._board_id:
-            try:
-                cfgboard = str(self._config["board"]).lower()
-            except KeyError:
-                raise KeyError("config has no 'board' defined!")
-
-            boards = self.jira.boards()
-
-            for b in boards:
-                if b.name.lower() == cfgboard or str(b.id) == cfgboard:
-                    self._board_id = str(b.id)
-                    break
-
-            if not self._board_id:
-                raise ValueError("Unable to find board '{}'".format(self._config["board"]))
-        return self._board_id
-
-    @property
-    def project_id(self):
-        if not self._project_id:
-            try:
-                cfgproject = str(self._config["project"]).lower()
-            except KeyError:
-                raise KeyError("config has no 'project' defined!")
-
-            projects = self.jira.projects()
-
-            for p in projects:
-                if any(x == cfgproject for x in [p.key.lower(), p.name.lower(), str(p.id)]):
-                    self._project_id = str(p.id)
-                    break
-
-            if not self._project_id:
-                raise ValueError("Unable to find project '{}'".format(self._config["project"]))
-        return self._project_id
-
-    @property
-    def userid(self):
-        if not self._userid:
-            self._userid = self.jira.myself()["key"]
-
-        return self._userid
+    current_sprint_id = attr.ib(default=0)
+    current_sprint_name = attr.ib(type=str, default=None)
+    board_id = attr.ib(default=0)
+    project_id = attr.ib(default=0)
 
     def find_sprint(self, txt):
         """
@@ -317,7 +110,7 @@ class JiraWrapper:
         Returns:
           tuple of (sprint_name, sprint_id)
         """
-        sprints = self.jira.sprints(board_id=self.board_id)
+        sprints = self.client.sprints(board_id=self.board_id)
         for s in sprints:
             txt = str(txt).lower()
             if txt.isdigit() and txt in [n for n in s.name.split() if n.isdigit()]:
@@ -326,15 +119,13 @@ class JiraWrapper:
                 return s.name, str(s.id)
         raise ValueError("Unable to find sprint with text: ", str(txt))
 
-    def get_current_sprint(self):
+    def get_current_sprint(self, board_id):
         active_sprints = (
             sprint
-            for sprint in self.jira.sprints(board_id=self.board_id, state="active")
+            for sprint in self.client.sprints(board_id=board_id, state="active")
             if sprint.state.lower() == "active"
         )
         current_sprint = sorted(active_sprints, key=lambda sprint: sprint.id)[-1]
-        self._current_sprint_id = str(current_sprint.id)
-        self._current_sprint_name = current_sprint.name
         return current_sprint
 
     @property
@@ -351,6 +142,55 @@ class JiraWrapper:
         if not self._current_sprint_name:
             self.get_current_sprint()
         return self._current_sprint_name
+
+    @cached_property
+    def info_for_board(self):
+        if not self.config.boards:
+            raise ValueError("No boards found in config")
+
+        config_boards = [str(board).lower() for board in self.config.boards]
+        server_boards = self.client.boards()
+        _info_for_board = {}
+
+        for idx, cb in enumerate(config_boards):
+            for sb in server_boards:
+                if sb.name.lower() == cb or str(sb.id) == cb:
+                    current_sprint = self.get_current_sprint(sb.id)
+                    _info_for_board[self.config.boards[idx]] = {
+                        "name": sb.name,
+                        "id": sb.id,
+                        "filter_query": sb.raw.get("filter", {}).get("query"),
+                        "current_sprint_name": current_sprint.name,
+                        "current_sprint_id": current_sprint.id,
+                    }
+                    break
+            else:
+                raise ValueError(f"Unable to find board '{cb}' on server")
+
+        return _info_for_board
+
+    @cached_property
+    def info_for_project(self):
+        if not self.config.projects:
+            raise ValueError("No projects found in config")
+
+        config_projects = [str(project).lower() for project in self.config.projects]
+        server_projects = self.client.projects()
+        _info_for_project = {}
+
+        for idx, cp in enumerate(config_projects):
+            for sp in server_projects:
+                if any(x == cp for x in [sp.key.lower(), sp.name.lower(), str(sp.id)]):
+                    _info_for_project[self.config.projects[idx]] = {
+                        "id": sp.id,
+                        "key": sp.key,
+                        "name": sp.name,
+                    }
+                    break
+            else:
+                raise ValueError(f"Unable to find project '{cp}' on server")
+
+        return _info_for_project
 
     def search_issues(self, assignee=None, sprint=None, status=None, text=None):
         """
@@ -377,22 +217,22 @@ class JiraWrapper:
             search_query = f"sprint = {sprint} "
         if not assignee:
             # Make sure we are still logged in, otherwise an empty list may be returned.
-            self.jira.myself()
+            self.client.myself()
             assignee = "currentUser()"
         search_query += f" AND assignee = {assignee}"
         if status:
             search_query += f' AND status in ("{status}")'
         if text:
             search_query += f' AND (summary ~ "{text}" OR description ~ "{text}")'
-        return self.jira.search_issues(search_query)
+        return self.client.search_issues(search_query)
 
     def get_my_issues(self):
         return self.search_issues()
 
     def get_worklog(self, issue):
         # Make sure we are still logged in, otherwise an empty list may be returned.
-        self.jira.myself()
-        return self.jira.worklogs(issue.key)
+        self.client.myself()
+        return self.client.worklogs(issue.key)
 
     def get_todays_worklogs(self, issue_list):
         worklogs = []
@@ -436,7 +276,7 @@ class JiraWrapper:
         """
         Find all "Done" issues assigned to me in the current sprint and 0 their time estimate.
         """
-        issues = self.jira.search_issues(
+        issues = self.client.search_issues(
             "sprint = {} AND assignee = currentUser() AND "
             'status = "Done" AND remainingEstimate > 0'.format(self.current_sprint_id)
         )
@@ -453,16 +293,6 @@ class JiraWrapper:
         """
         return txt.replace(" ", "").lower()
 
-    @property
-    def component_labels_map(self):
-        try:
-            lowercase_data = {
-                k.lower(): [l.lower() for l in v] for k, v in self._component_labels_map.items()
-            }
-        except KeyError:
-            lowercase_data = {}
-        return lowercase_data
-
     def find_component(self, txt):
         """
         Find component whose name or id matches 'txt', case insensitive
@@ -473,7 +303,7 @@ class JiraWrapper:
         Returns:
           tuple of (component_name, component_id)
         """
-        components = self.jira.project_components(self.project_id)
+        components = self.client.project_components(self.project_id)
         # First, try exact match
         for c in components:
             if (str(txt).isdigit and str(c.id) == str(txt)) or str(txt).lower() == c.name.lower():
@@ -483,17 +313,6 @@ class JiraWrapper:
             if str(txt).lower() in c.name.lower():
                 return c.name, c.id
         raise ValueError("Unable to find component with text: ", str(txt))
-
-    def _check_comp_labels(self, component, labels):
-        if not component or not labels:
-            return
-        if self.label_check:
-            comp_lower = component.lower()
-            labels_lower = [l.lower() for l in labels]
-            if comp_lower in self.component_labels_map:
-                for l in labels_lower:
-                    if l not in self.component_labels_map[comp_lower]:
-                        raise InvalidLabelError(component, l)
 
     def update_component(self, issue, component_name):
         server_side_name, _ = self.find_component(component_name)
@@ -524,7 +343,7 @@ class JiraWrapper:
         This way if txt is 'inprogress' this matches to "In Progress"
         """
         txt = self.normalize_name(txt)
-        statuses = self._jira.statuses()
+        statuses = self.client.statuses()
         for s in statuses:
             if txt == self.normalize_name(s.name):
                 return s.name
@@ -546,7 +365,7 @@ class JiraWrapper:
                 "id": t["id"],
                 "friendly_name": t["name"],
             }
-            for t in self.jira.transitions(issue)
+            for t in self.client.transitions(issue)
             if "Parallel Team" not in t["name"]
         ]
         avail_statuses.sort(key=lambda s: s["name"])
@@ -620,33 +439,22 @@ class JiraWrapper:
             labels
         ).project(id=self.project_id).issuetype(issuetype).timetracking(timeleft, timeleft)
 
-        new_issue = self.jira.create_issue(**f.kwarg)
+        new_issue = self.client.create_issue(**f.kwarg)
 
         if assignee:
-            self.jira.assign_issue(new_issue.key, assignee)
+            self.client.assign_issue(new_issue.key, assignee)
 
         if sprint == "backlog":
-            self.jira.move_to_backlog([new_issue.key])
+            self.client.move_to_backlog([new_issue.key])
         else:
-            self.jira.add_issues_to_sprint(sprint_id, [new_issue.key])
+            self.client.add_issues_to_sprint(sprint_id, [new_issue.key])
 
     def init(self):
         """Initialize all properties in one shot so it doesn't have to be done later."""
-        # Note that these init self.jira too...
-        print("Connecting to JIRA & gathering some info ...")
-        try:
-            self.userid
-        except JIRAError as e:
-            if "CAPTCHA_CHALLENGE" in e.text:
-                print("Your userID currently requires answering a CAPTCHA to login via basic auth")
-                input(
-                    "Open {} in a browser, log in there to answer the CAPTCHA\n"
-                    "Hit 'enter' here when done.".format(self.jira_url)
-                )
+        # Note that these init self.client too...
+        from pprint import pprint
+
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")  # Hide jira greenhopper API warnings
-            print("UserID:", self.userid)
-            print("Project ID:", self.project_id)
-            print("Board ID:", self.board_id)
-            print("Current sprint name:", self.current_sprint_name)
-            print("Current sprint ID:", self.current_sprint_id)
+            pprint(self.info_for_board)
+            pprint(self.info_for_project)

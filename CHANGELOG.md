@@ -29,5 +29,3 @@
 0.2.0
 =====
 * add auth retry mechanisms
-
-

@@ -1,2 +1,3 @@
 pre-commit
+ipython
 -r requirements.txt
